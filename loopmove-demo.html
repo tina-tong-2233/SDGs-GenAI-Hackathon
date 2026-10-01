@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LoopMove SZ–HK · Phased Relocation & Circular Item Management</title>
+<style>
+:root{
+  --ink:#0f2b24; --ink2:#20362f; --muted:#61746d; --line:#dde6e1; --line2:#c8d6cf;
+  --brand:#0f6b4f; --brand2:#0d5a43; --brand-soft:#e7f3ed;
+  --warn:#9a6314; --warn-soft:#fdf3e3;
+  --danger:#9c2b22; --danger-soft:#fbeae8;
+  --info:#1c4f7c; --info-soft:#e8f0f8;
+  --bg:#f5f8f6; --card:#ffffff;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:system-ui,-apple-system,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans SC",sans-serif;
+  background:var(--bg); color:var(--ink); line-height:1.55; font-size:14px;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{margin:0; font-weight:650; letter-spacing:-.01em}
+a{color:var(--brand); text-decoration:none}
+a:hover{text-decoration:underline}
+button{font-family:inherit; font-size:inherit; cursor:pointer}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ---------- shell ---------- */
+.topbar{
+  position:sticky; top:0; z-index:50; background:#fff; border-bottom:1px solid var(--line);
+  padding:10px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.brand{display:flex; align-items:center; gap:9px; font-weight:700; font-size:15px}
+.logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--brand),#39a07a);
+  display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800}
+.brand small{display:block;font-weight:500;font-size:10.5px;color:var(--muted);letter-spacing:.02em}
+.spacer{flex:1}
+.steps{display:flex; gap:2px; align-items:center; flex-wrap:wrap}
+.step{
+  padding:6px 13px; border-radius:20px; font-size:12.5px; color:var(--muted);
+  border:1px solid transparent; background:none; display:flex; gap:6px; align-items:center; white-space:nowrap;
+}
+.step .n{width:17px;height:17px;border-radius:50%;background:var(--line2);color:#fff;
+  display:grid;place-items:center;font-size:10.5px;font-weight:700}
+.step.on{background:var(--brand-soft); color:var(--brand2); font-weight:600; border-color:#bfe0d0}
+.step.on .n{background:var(--brand)}
+.step.done .n{background:var(--brand2)}
+.step:disabled{opacity:.45; cursor:not-allowed}
+.tools{display:flex; gap:6px; align-items:center}
+.btn{
+  border:1px solid var(--line2); background:#fff; color:var(--ink2);
+  padding:6px 12px; border-radius:7px; font-size:12.5px; font-weight:500;
+}
+.btn:hover{background:#f1f6f3}
+.btn.primary{background:var(--brand); border-color:var(--brand); color:#fff}
+.btn.primary:hover{background:var(--brand2)}
+.btn.sm{padding:4px 9px; font-size:11.5px}
+.btn.ghost{border-color:transparent; background:transparent; color:var(--muted)}
+.btn.ghost:hover{background:#eef3f0; color:var(--ink)}
+.btn:disabled{opacity:.4; cursor:not-allowed}
+
+.wrap{max-width:1180px; margin:0 auto; padding:22px 20px 90px}
+.screen{display:none}
+.screen.on{display:block}
+.shead{margin-bottom:18px}
+.shead h2{font-size:20px}
+.shead p{margin:5px 0 0; color:var(--muted); font-size:13px; max-width:760px}
+
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px 18px; margin-bottom:14px}
+.card h3{font-size:14.5px; margin-bottom:3px}
+.card .sub{color:var(--muted); font-size:12px; margin-bottom:12px}
+
+/* ---------- estate picker ---------- */
+.estates{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px}
+.estate{
+  border:1.5px solid var(--line); border-radius:var(--r); padding:14px; background:#fff; text-align:left;
+  transition:.15s;
+}
+.estate:hover{border-color:var(--line2); background:#fafcfb}
+.estate.on{border-color:var(--brand); background:var(--brand-soft)}
+.estate h4{font-size:14px; display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+.estate .en{font-size:11px; color:var(--muted); font-weight:400}
+.mat{display:flex; align-items:center; gap:8px; margin:9px 0 10px}
+.matbar{flex:1;height:6px;border-radius:4px;background:#e6ede9;overflow:hidden}
+.matfill{height:100%;background:linear-gradient(90deg,#39a07a,var(--brand));border-radius:4px}
+.matv{font-size:11.5px; font-weight:700; color:var(--brand2); min-width:34px; text-align:right}
+.frow{display:flex; justify-content:space-between; gap:8px; font-size:11.5px; padding:3px 0; border-top:1px dashed #eaf0ec}
+.frow span:first-child{color:var(--muted)}
+.pill{font-size:10px;padding:1.5px 6px;border-radius:10px;font-weight:600;white-space:nowrap}
+.p-op{background:var(--brand-soft); color:var(--brand2)}
+.p-pl{background:var(--warn-soft); color:var(--warn)}
+.p-no{background:var(--danger-soft); color:var(--danger)}
+
+/* ---------- forms ---------- */
+.grid2{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+label.fld{display:block; font-size:12px; color:var(--muted); margin-bottom:4px; font-weight:500}
+select,input[type=text],input[type=number]{
+  width:100%; padding:7px 9px; border:1px solid var(--line2); border-radius:7px;
+  background:#fff; font-family:inherit; font-size:13px; color:var(--ink);
+}
+select:focus,input:focus{outline:2px solid #bfe0d0; outline-offset:0; border-color:var(--brand)}
+
+/* ---------- inventory ---------- */
+.invbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px}
+table.tbl{width:100%; border-collapse:collapse; font-size:12.5px}
+table.tbl th{
+  text-align:left; font-weight:600; color:var(--muted); font-size:11px; text-transform:uppercase;
+  letter-spacing:.04em; padding:8px 8px; border-bottom:1.5px solid var(--line); white-space:nowrap;
+}
+table.tbl td{padding:8px; border-bottom:1px solid #eef3f0; vertical-align:middle}
+table.tbl tr:hover td{background:#fafcfb}
+table.tbl tr.sz td{background:#fcfaf5}
+.num{text-align:right; font-variant-numeric:tabular-nums}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:10px;background:#eef3f0;color:var(--ink2);white-space:nowrap;display:inline-block}
+.tag.warn{background:var(--warn-soft); color:var(--warn)}
+.tag.dang{background:var(--danger-soft); color:var(--danger)}
+.tag.ok{background:var(--brand-soft); color:var(--brand2)}
+.tag.info{background:var(--info-soft); color:var(--info)}
+.ai{background:#f4f0fb; color:#5b3a9e}
+
+/* ---------- trip plan ---------- */
+.trips{display:grid; grid-template-columns:repeat(auto-fit,minmax(285px,1fr)); gap:13px; align-items:start}
+.trip{background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.triph{padding:11px 14px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:9px}
+.triph .ic{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff}
+.triph h4{font-size:13.5px}
+.triph .when{font-size:11px;color:var(--muted);font-weight:400}
+.tripb{padding:6px 8px 10px; max-height:460px; overflow:auto}
+.t1 .ic{background:var(--danger)} .t2 .ic{background:var(--brand)} .t3 .ic{background:#7b8f88}
+.tbuy .ic{background:var(--info)} .tsz .ic{background:var(--warn)}
+.item{
+  display:flex; gap:8px; align-items:flex-start; padding:8px 7px; border-radius:7px; cursor:pointer;
+  border:1px solid transparent;
+}
+.item:hover{background:#f4f9f6; border-color:#e2ece7}
+.item .dot{width:7px;height:7px;border-radius:50%;background:var(--line2);margin-top:6px;flex:none}
+.item .nm{flex:1; font-size:12.5px}
+.item .nm small{display:block;color:var(--muted);font-size:10.5px;margin-top:1px}
+.item .cost{font-size:11px;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.item.ai-src .dot{background:#8b5cf6}
+.empty{padding:18px 12px;text-align:center;color:var(--muted);font-size:12px}
+
+/* ---------- trace drawer ---------- */
+.mask{position:fixed;inset:0;background:rgba(15,43,36,.34);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.mask.on{display:flex}
+.drawer{
+  background:#fff;width:min(680px,100%);max-height:88vh;overflow:auto;
+  border-radius:14px 14px 0 0; padding:20px 22px 26px; box-shadow:0 -8px 40px rgba(0,0,0,.16);
+}
+.drawer h3{font-size:16px;margin-bottom:2px}
+.drawer .close{float:right}
+.verdict{
+  margin:12px 0 16px; padding:11px 14px; border-radius:8px; font-size:13px; font-weight:600;
+  display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.v-move{background:var(--brand-soft); color:var(--brand2)}
+.v-buy{background:var(--info-soft); color:var(--info)}
+.v-sz{background:var(--warn-soft); color:var(--warn)}
+.v-block{background:var(--danger-soft); color:var(--danger)}
+.trace{border-left:2px solid var(--line2); margin:0 0 4px; padding-left:0}
+.tr{display:flex; gap:11px; padding:8px 0 8px 13px; margin-left:-2px; border-left:2px solid transparent; position:relative}
+.tr .k{
+  flex:none; width:118px; font-size:11px; color:var(--muted); font-weight:600;
+  letter-spacing:.02em; padding-top:1px;
+}
+.tr .v{flex:1; font-size:12.5px}
+.tr .v b{font-weight:650}
+.tr .v em{font-style:normal;color:var(--muted);font-size:11.5px;display:block;margin-top:2px}
+.tr.hl{border-left-color:var(--brand); background:linear-gradient(90deg,var(--brand-soft),transparent)}
+.tr.bad{border-left-color:var(--danger); background:linear-gradient(90deg,var(--danger-soft),transparent)}
+.tr.wr{border-left-color:var(--warn); background:linear-gradient(90deg,var(--warn-soft),transparent)}
+.calc{
+  font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12px; background:#f6f9f7;
+  border:1px solid var(--line); border-radius:7px; padding:9px 11px; margin-top:4px; white-space:pre-wrap;
+}
+
+/* ---------- recovery ---------- */
+.rcard{border:1px solid var(--line);border-radius:var(--r);background:#fff;margin-bottom:12px;overflow:hidden}
+.rhead{padding:12px 15px;background:#fafcfb;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.rhead h4{font-size:14px}
+.rhead .cond{font-size:11px;color:var(--muted)}
+.offers{display:grid;grid-template-columns:repeat(auto-fit,minmax(224px,1fr));gap:1px;background:var(--line)}
+.offer{background:#fff;padding:12px 13px}
+.offer.best{background:var(--brand-soft);box-shadow:inset 3px 0 0 var(--brand)}
+.offer.blocked{background:#fbf8f7}
+.offer .oh{display:flex;justify-content:space-between;gap:6px;align-items:baseline;margin-bottom:7px}
+.offer .on{font-size:12.5px;font-weight:650}
+.offer .side{font-size:10px;color:var(--muted)}
+.net{font-size:19px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.net.pos{color:var(--brand)} .net.neg{color:var(--danger)} .net.zero{color:var(--muted)}
+.bk{display:flex;justify-content:space-between;font-size:11.5px;padding:2.5px 0;font-variant-numeric:tabular-nums}
+.bk span:first-child{color:var(--muted)}
+.bl{font-weight:600}
+.bk.tot{border-top:1px solid var(--line2);margin-top:4px;padding-top:5px;font-weight:700;font-size:12.5px}
+.onote{font-size:11px;color:var(--muted);margin-top:8px;padding-top:7px;border-top:1px dashed #eaf0ec}
+.onote.warn{color:var(--warn)}
+.obad{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;background:var(--brand);color:#fff}
+.obad.r{background:var(--danger)}
+
+.srcs{font-size:11px;color:var(--muted);margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
+.srcs a{color:var(--info)}
+.srcs div{padding:1.5px 0}
+
+/* ---------- notice ---------- */
+.notice{
+  border-radius:8px;padding:10px 13px;font-size:12.5px;margin-bottom:12px;
+  display:flex;gap:9px;align-items:flex-start;
+}
+.notice .ic{flex:none;font-weight:800;font-size:13px}
+.n-info{background:var(--info-soft);color:#163d61}
+.n-warn{background:var(--warn-soft);color:#7d4f0f}
+.n-dang{background:var(--danger-soft);color:#7d2119}
+.n-ok{background:var(--brand-soft);color:var(--brand2)}
+.notice b{font-weight:700}
+
+/* ---------- manage view ---------- */
+body.assist{font-size:16px}
+body.assist .wrap{max-width:900px}
+body.assist .item,body.assist .tr{padding:12px 10px}
+body.assist .btn{padding:9px 15px;font-size:14px}
+body.assist .card{padding:20px}
+body.assist .step{font-size:14px;padding:8px 16px}
+.assistbar{display:none;background:var(--brand-soft);border-bottom:1px solid #bfe0d0;
+  padding:10px 20px;font-size:13px;color:var(--brand2)}
+body.assist .assistbar{display:block}
+.assistbar b{font-weight:700}
+body.assist .net{font-size:23px}
+
+/* ---------- print ---------- */
+@media print{
+  body{background:#fff;font-size:11pt}
+  .topbar,.noprint,.steps,.tools,.invbar,.mask,.drawer,.item .dot{display:none!important}
+  .wrap{max-width:100%;padding:0}
+  .screen{display:none!important}
+  .screen.printon{display:block!important}
+  .card,.trip,.rcard{break-inside:avoid;box-shadow:none}
+  .trips{display:block}
+  .trip{margin-bottom:10pt;page-break-inside:avoid}
+  .tripb{max-height:none;overflow:visible}
+  a{color:#000;text-decoration:none}
+  .ph{display:block!important}
+  .notice{background:#f4f4f4!important;color:#000!important;border:1px solid #ccc}
+}
+.ph{display:none;border-bottom:2px solid var(--brand);padding-bottom:8px;margin-bottom:16px}
+.ph h1{font-size:19pt}
+.ph .meta{font-size:9.5pt;color:#444;margin-top:4px}
+.pfoot{display:none;margin-top:18px;padding-top:10px;border-top:1px solid #ccc;font-size:8.5pt;color:#555}
+@media print{.pfoot{display:block}}
+.hint{font-size:11.5px;color:var(--muted);margin-top:6px}
+.gate{display:flex;gap:10px;align-items:center;font-size:13px;cursor:pointer;
+  padding:10px 13px;border:1px solid var(--line2);border-radius:8px;background:#fafcfb}
+.gate input{width:17px;height:17px;margin:0;accent-color:var(--brand);cursor:pointer}
+.gate:hover{background:#f2f7f4}
+.kbd{font-family:ui-monospace,Menlo,monospace;background:#eef3f0;border:1px solid var(--line2);
+  border-radius:4px;padding:1px 5px;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="logo">L</div>
+    <div>LoopMove<small>SZ → HK Northern Metropolis</small></div>
+  </div>
+  <div class="steps" id="steps"></div>
+  <div class="spacer"></div>
+  <div class="tools">
+    <button class="btn sm" id="langBtn">EN</button>
+    <button class="btn sm" id="assistBtn">物管协助模式</button>
+    <button class="btn sm" id="printBtn">打印 / PDF</button>
+  </div>
+</div>
+
+<div class="assistbar" id="assistbar"></div>
+
+<div class="wrap">
+
+  <!-- ===== SCREEN 1 ===== -->
+  <section class="screen on" id="s1">
+    <div class="shead">
+      <h2 id="t1h">目的地与家庭档案</h2>
+      <p id="t1p">所有建议都从「你搬到哪里、什么时候入住」开始。北部都会区各社区的设施成熟度差异很大，这直接决定哪些东西必须第一批带过去。</p>
+    </div>
+    <div class="card">
+      <h3 id="t1e">选择目的地社区</h3>
+      <div class="sub" id="t1es">设施状态来自政府规划文件与开放数据，标注最后核查日期。「计划中」的设施不会被当作现已可用。</div>
+      <div class="estates" id="estates"></div>
+    </div>
+    <div class="card">
+      <h3 id="t1d">搬迁参数</h3>
+      <div class="grid2">
+        <div>
+          <label class="fld" id="l-movein">预计入住月份</label>
+          <select id="movein"></select>
+        </div>
+        <div>
+          <label class="fld" id="l-household">家庭构成</label>
+          <select id="household"></select>
+        </div>
+        <div>
+          <label class="fld" id="l-origin">深圳现居区域</label>
+          <select id="origin"></select>
+        </div>
+        <div>
+          <label class="fld" id="l-trips">预计可搬运趟数</label>
+          <select id="ntrips"></select>
+        </div>
+      </div>
+      <div class="notice n-info" style="margin:14px 0 0">
+        <span class="ic">i</span>
+        <div id="t1note"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" data-go="2" id="t1next">下一步：录入物品 →</button>
+    </div>
+  </section>
+
+  <!-- ===== SCREEN 2 ===== -->
+  <section class="screen" id="s2">
+    <div class="shead">
+      <h2 id="t2h">物品清单</h2>
+      <p id="t2p">AI 只负责减轻录入负担。识别结果一律可编辑，且永远不会当作物品状况的最终判定。</p>
+    </div>
+    <div class="notice n-warn">
+      <span class="ic">!</span>
+      <div id="t2warn"></div>
+    </div>
+    <div class="card">
+      <div class="invbar">
+        <button class="btn primary sm" id="aiBtn">拍摄 / 导入照片（模拟识别）</button>
+        <button class="btn sm" id="addBtn">+ 手动添加</button>
+        <button class="btn sm" id="resetBtn">恢复默认清单</button>
+        <div class="spacer"></div>
+        <span class="hint mono" id="invcount"></span>
+      </div>
+      <div id="invtable"></div>
+      <div class="hint" id="t2hint"></div>
+    </div>
+    <div class="card" id="aibox" style="display:none">
+      <h3 id="t2ai">AI 识别结果（模拟）</h3>
+      <div class="sub" id="t2ais">本 demo 使用预置结果，不调用真实视觉模型。注意下面第一个条目 —— 识别是错的，你可以纠正它。</div>
+      <div id="airesults"></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn primary sm" id="aiAccept">采纳并重新计算整份计划</button>
+        <button class="btn sm" id="aiClose">关闭</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" data-go="1">← 返回</button>
+      <button class="btn primary" data-go="3" id="t2next">生成分阶段计划 →</button>
+    </div>
+  </section>
+
+  <!-- ===== SCREEN 3 ===== -->
+  <section class="screen printon" id="s3">
+    <div class="ph">
+      <h1>LoopMove · 分阶段搬迁计划</h1>
+      <div class="meta" id="phmeta"></div>
+    </div>
+    <div class="shead noprint">
+      <h2 id="t3h">分阶段搬迁计划</h2>
+      <p id="t3p">点击任意物品可展开完整决策链 —— 它为什么在这个阶段，而不是别的阶段。</p>
+    </div>
+    <div class="notice n-ok">
+      <span class="ic">✓</span>
+      <div id="t3sum"></div>
+    </div>
+    <div class="trips" id="trips"></div>
+    <div class="card noprint">
+      <h3 id="t3c">合规与不确定性提示</h3>
+      <div id="t3flags"></div>
+    </div>
+    <div class="pfoot" id="pfoot"></div>
+    <div style="display:flex;gap:8px" class="noprint">
+      <button class="btn" data-go="2">← 返回清单</button>
+      <button class="btn primary" data-go="4" id="t3next">查看物品处置对比 →</button>
+    </div>
+  </section>
+
+  <!-- ===== SCREEN 4 ===== -->
+  <section class="screen" id="s4">
+    <div class="shead">
+      <h2 id="t4h">循环物品处置对比</h2>
+      <p id="t4p">对深圳侧不再需要的物品，逐条比较净结果。系统严格区分四种性质完全不同的「好处」。</p>
+    </div>
+    <div class="notice n-dang">
+      <span class="ic">×</span>
+      <div id="t4warn"></div>
+    </div>
+    <div class="card">
+      <h3 id="t4gate">条件性渠道：是否打算购买新家电？</h3>
+      <div class="sub" id="t4gates">以旧换新是「买新机时的折扣」，不是回收款。在你明确表示要购新之前，它不参与推荐排序 —— 这样系统才不会把补贴冒充成回收收入。</div>
+      <label class="gate">
+        <input type="checkbox" id="buyNewChk">
+        <span id="t4gateL">我计划在深圳购买新家电（激活以旧换新补贴渠道）</span>
+      </label>
+      <div class="hint" id="t4gateH">试着勾选再取消，观察旧冰箱与旧洗衣机的推荐如何变化。</div>
+    </div>
+    <div class="card">
+      <h3 id="t4leg">收益性质图例</h3>
+      <div class="grid2" id="legend" style="gap:10px"></div>
+    </div>
+    <div id="recovery"></div>
+    <div class="srcs" id="srcs4"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn" data-go="3">← 返回计划</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="mask" id="mask"><div class="drawer" id="drawer"></div></div>
+
+<script>
+/* =====================================================================
+   LoopMove demo — single file
+   Layer 1: curated data (every service record carries source + last_verified)
+   Layer 2: rule engine (returns decision_trace, never a bare answer)
+   Layer 3: UI (4 screens + print + property-management assisted mode)
+   ===================================================================== */
+
+/* ------------------------------ sources ------------------------------ */
+const SRC = {
+  nm:{zh:'北部都会区官方愿景（约 250 万人口 / 65 万职位）',en:'Northern Metropolis vision (~2.5M residents / 650k jobs)',url:'https://www.nm.gov.hk/en/northern-metropolis',v:'2026-01-21'},
+  phasing:{zh:'政府 transport 规划答复（粉岭北/古洞北分期入伙、古洞站 2027）',en:'Govt transport-planning reply (phased intake, Kwu Tung Stn 2027)',url:'https://www.info.gov.hk/gia/general/202601/21/P2026012100234p.htm',v:'2026-01-21'},
+  furniture:{zh:'政府答复：弃置家具无独立统计，重用通常优于拆解回收',en:'Govt reply: no separate stats on discarded furniture; reuse preferred',url:'https://www.info.gov.hk/gia/general/202411/06/P2024110600261.htm',v:'2024-11-06'},
+  wprs:{zh:'香港 WPRS：购买受管制电器时卖家须应要求免费移走同类旧电器（是服务，不是现金）',en:'HK PRS: seller must arrange free removal of same-class old appliance (service, not cash)',url:'https://www.epd.gov.hk/epd/english/environmentinhk/waste/pro_responsibility/index.html',v:'2026-02-10'},
+  szbulky:{zh:'深圳大件家具预约收集（搬到指定临时堆放点或联系物业）',en:'Shenzhen appointment-based bulky furniture collection',url:'https://www.sz.gov.cn/ztfw/gysy/wyc_183959/wsljcl/content/post_11466542.html',v:'2026-02-10'},
+  szsub:{zh:'深圳 2026 家电以旧换新：15% 补贴，单件上限 RMB 1,500（属购买补贴）',en:'Shenzhen 2026 trade-in: 15% subsidy, cap RMB1,500 (purchase subsidy)',url:'https://www.sz.gov.cn/cn/xxgk/zfxxgj/zwdt/content/post_12661713.html',v:'2026-02-10'},
+  recycle:{zh:'DATA.GOV.HK 回收点数据集',en:'DATA.GOV.HK recyclable collection points',url:'https://data.gov.hk/en-data/dataset/hk-epd-recycteam-waste-less-recyclable-collection-points-data',v:'2026-02-10'},
+  fehd:{zh:'DATA.GOV.HK 食环署设施与服务地点',en:'DATA.GOV.HK FEHD facility locations',url:'https://data.gov.hk/tc-data/dataset/hk-fehd-fehdlocatn-fehd-facility-and-service-locations',v:'2026-02-10'},
+  emsd:{zh:'机电工程署家居电器安全指引（220V/50Hz、合规插头）',en:'EMSD household electrical product safety guidance',url:'https://wcms.emsd.gov.hk/en/electricity_safety/information_for_the_electrical_trade/electricity_news/38th_issue_oct_2025/index.html',v:'2025-10-01'},
+  customs:{zh:'香港海关：废弃受管制电器进出口受管制，实际情形须向官方确认',en:'HK Customs: import/export of abandoned regulated e-equipment is controlled',url:'https://www.customs.gov.hk/en/service-enforcement-information/cargo-clearance/faqs/index.html',v:'2026-02-10'},
+  pcpd:{zh:'个人资料私隐专员公署：AI 处理个人资料需持续风险评估',en:'PCPD: ongoing risk assessment where AI processes personal data',url:'https://www.pcpd.org.hk/english/news_events/media_statements/press_20260519.html',v:'2026-05-19'}
+};
+
+/* ------------------------------ estates ------------------------------ */
+/* avail = 0..1 可获得性; st: op 运营中 / pl 计划中 / no 暂无 */
+const ESTATES = {
+  kwutung:{
+    zh:'古洞北', en:'Kwu Tung North',
+    note:{zh:'古洞站预计 2027 年启用；零售与社区设施仍分期建设，入伙初期配套最薄弱。',
+          en:'Kwu Tung Station expected 2027; retail and community facilities still rolling out.'},
+    f:{
+      supermarket:{st:'pl',avail:.25,eta:{zh:'2027–2028',en:'2027–2028'},src:'phasing'},
+      retail:{st:'no',avail:.12,eta:{zh:'2028 以后',en:'2028+'},src:'phasing'},
+      furniture:{st:'no',avail:.05,eta:{zh:'2028 以后',en:'2028+'},src:'phasing'},
+      appliance:{st:'no',avail:.10,eta:{zh:'2028 以后',en:'2028+'},src:'phasing'},
+      recycling:{st:'pl',avail:.30,eta:{zh:'随入伙分期',en:'phased'},src:'recycle'},
+      delivery:{st:'pl',avail:.35,eta:{zh:'覆盖不全',en:'partial'},src:'phasing'},
+      transport:{st:'pl',avail:.20,eta:{zh:'古洞站 2027',en:'Station 2027'},src:'phasing'}
+    }
+  },
+  fanling:{
+    zh:'粉岭北', en:'Fanling North',
+    note:{zh:'预计 2026 年中至 2027 迎来约 5.5 万新增居民；部分配套依托既有粉岭社区。',
+          en:'~55k additional residents mid-2026 to 2027; partly served by existing Fanling.'},
+    f:{
+      supermarket:{st:'op',avail:.55,eta:{zh:'部分运营',en:'partly open'},src:'phasing'},
+      retail:{st:'pl',avail:.50,eta:{zh:'2027–2028',en:'2027–2028'},src:'phasing'},
+      furniture:{st:'pl',avail:.35,eta:{zh:'2027–2028',en:'2027–2028'},src:'phasing'},
+      appliance:{st:'pl',avail:.30,eta:{zh:'2027–2028',en:'2027–2028'},src:'phasing'},
+      recycling:{st:'op',avail:.50,eta:{zh:'已有回收点',en:'existing'},src:'recycle'},
+      delivery:{st:'op',avail:.60,eta:{zh:'基本覆盖',en:'mostly'},src:'phasing'},
+      transport:{st:'op',avail:.45,eta:{zh:'现有铁路/巴士',en:'rail + bus'},src:'phasing'}
+    }
+  },
+  hungshui:{
+    zh:'洪水桥', en:'Hung Shui Kiu',
+    note:{zh:'发展较为成熟，零售与交通配套相对齐备；可购买的品类和价格选择更多。',
+          en:'More mature; wider retail and transport provision.'},
+    f:{
+      supermarket:{st:'op',avail:.72,eta:{zh:'已运营',en:'operating'},src:'fehd'},
+      retail:{st:'op',avail:.65,eta:{zh:'已运营',en:'operating'},src:'fehd'},
+      furniture:{st:'pl',avail:.50,eta:{zh:'部分运营',en:'partly open'},src:'fehd'},
+      appliance:{st:'op',avail:.58,eta:{zh:'已运营',en:'operating'},src:'fehd'},
+      recycling:{st:'op',avail:.60,eta:{zh:'已有回收点',en:'existing'},src:'recycle'},
+      delivery:{st:'op',avail:.70,eta:{zh:'覆盖良好',en:'good'},src:'fehd'},
+      transport:{st:'op',avail:.55,eta:{zh:'现有铁路/巴士',en:'rail + bus'},src:'phasing'}
+    }
+  }
+};
+
+/* 日用消耗品：本地买得到就不值得占用跨境运输额度 */
+const CONSUMABLE = {daily:true};
+
+/* 品类 → 依赖的本地设施 */
+const CAT2F = {
+  essential:'supermarket', daily:'supermarket', kitchenware:'supermarket',
+  clothing:'retail', decor:'retail',
+  furniture:'furniture',
+  appliance_s:'appliance', appliance_m:'appliance', appliance_l:'appliance', electronics:'appliance'
+};
+
+/* ------------------------------ catalog ------------------------------ */
+/* repl = 香港重置价(HKD); cond: good/fair/poor/broken */
+const CATALOG = [
+  {id:'doc',  zh:'证件、签证与租约文件', en:'ID, visa & tenancy documents', cat:'essential', vol:.01,wt:1, urgency:'immediate', essential:true, repl:null, cond:'good'},
+  {id:'med',  zh:'处方药（一个月量）',   en:'Prescription medication (1 month)', cat:'essential', vol:.01,wt:.5, urgency:'immediate', essential:true, repl:null, cond:'good'},
+  {id:'bed',  zh:'床上用品（被、枕、床单）', en:'Bedding (quilt, pillows, sheets)', cat:'essential', vol:.14,wt:5, urgency:'immediate', essential:true, repl:700, cond:'good'},
+  {id:'cl7',  zh:'基本衣物（7 天）',     en:'Basic clothing (7 days)', cat:'clothing', vol:.05,wt:4, urgency:'immediate', essential:true, repl:900, cond:'good'},
+  {id:'lap',  zh:'笔记本电脑 + 充电器',  en:'Laptop + charger', cat:'electronics', vol:.01,wt:2, urgency:'immediate', essential:true, repl:8000, cond:'good', appliance:true, volt:'100–240V', plug:'USB-C', plugOk:true},
+  {id:'ada',  zh:'转换插头 / 拖板',      en:'Travel adaptor / power strip', cat:'electronics', vol:.005,wt:.4, urgency:'immediate', essential:true, repl:120, cond:'good', appliance:true, volt:'—', plug:'英标', plugOk:true},
+  {id:'toi',  zh:'洗漱用品与毛巾',       en:'Toiletries & towels', cat:'daily', vol:.03,wt:1.5, urgency:'high', repl:250, cond:'good'},
+  {id:'cle',  zh:'清洁用品与杂物',       en:'Cleaning supplies & sundries', cat:'daily', vol:.09,wt:6, urgency:'medium', repl:220, cond:'good'},
+  {id:'pot',  zh:'基本炊具（锅、刀、砧板）', en:'Basic cookware (pot, knife, board)', cat:'kitchenware', vol:.05,wt:3, urgency:'high', repl:600, cond:'good'},
+  {id:'lamp', zh:'台灯',                 en:'Desk lamp', cat:'appliance_s', vol:.02,wt:1.5, urgency:'medium', repl:280, cond:'good', appliance:true, volt:'220V', plug:'国标两脚', plugOk:false},
+  {id:'rice', zh:'电饭煲',               en:'Rice cooker', cat:'appliance_m', vol:.035,wt:4, urgency:'medium', repl:520, cond:'good', appliance:true, volt:'220V', plug:'国标三脚', plugOk:false, regulated:true},
+  {id:'mw',   zh:'微波炉',               en:'Microwave oven', cat:'appliance_m', vol:.07,wt:12, urgency:'low', repl:900, cond:'good', appliance:true, volt:'220V', plug:'国标三脚', plugOk:false, regulated:true},
+  {id:'desk', zh:'书桌',                 en:'Desk', cat:'furniture', vol:.38,wt:25, urgency:'medium', repl:1300, cond:'good'},
+  {id:'mat',  zh:'床垫（1.5 米）',        en:'Mattress (1.5m)', cat:'furniture', vol:.58,wt:30, urgency:'high', repl:3600, cond:'good'},
+  {id:'sofa', zh:'三人沙发',             en:'3-seater sofa', cat:'furniture', vol:2.2,wt:60, urgency:'low', repl:6200, cond:'good'},
+  {id:'wdr',  zh:'衣柜',                 en:'Wardrobe', cat:'furniture', vol:1.4,wt:45, urgency:'low', repl:4200, cond:'good'},
+  {id:'win',  zh:'冬季衣物与被褥',        en:'Winter clothing & quilts', cat:'clothing', vol:.16,wt:9, urgency:'low', repl:1600, cond:'good'},
+  {id:'dec',  zh:'书籍与装饰品',          en:'Books & decorations', cat:'decor', vol:.18,wt:14, urgency:'low', repl:900, cond:'good'}
+];
+
+/* 深圳侧待处置物品 */
+const UNWANTED = [
+  {id:'fridge', zh:'旧冰箱（仍能正常使用）', en:'Old fridge (still working)', cat:'appliance_l', side:'sz', unwanted:true,
+   cond:'working', vol:.85,wt:70, appliance:true, volt:'220V', plug:'国标三脚', plugOk:false, regulated:true, resale:650},
+  {id:'wash',   zh:'旧洗衣机（已损坏）',    en:'Old washing machine (broken)', cat:'appliance_l', side:'sz', unwanted:true,
+   cond:'broken', vol:.5,wt:55, appliance:true, volt:'220V', plug:'国标三脚', plugOk:false, regulated:true, resale:0},
+  {id:'shelf',  zh:'旧书架（层板已变形）',  en:'Old bookshelf (warped shelves)', cat:'furniture', side:'sz', unwanted:true,
+   cond:'poor', vol:.4,wt:18, resale:0},
+  {id:'osofa',  zh:'旧沙发（布面磨损）',    en:'Old sofa (worn fabric)', cat:'furniture', side:'sz', unwanted:true,
+   cond:'poor', vol:1.9,wt:55, resale:0},
+  {id:'strol',  zh:'儿童推车（用旧但完好）', en:'Stroller (used, sound)', cat:'furniture', side:'sz', unwanted:true,
+   cond:'fair', vol:.18,wt:9, resale:260}
+];
+
+/* ------------------------- 模拟 AI 识别结果 ------------------------- */
+const AI_MOCK = [
+  {guess:{zh:'餐桌',en:'Dining table'}, truth:{zh:'书桌（宜家）',en:'Desk (IKEA)'}, conf:.71, wrong:true,
+   patch:{id:'desk', name:{zh:'书桌（宜家 MALM）',en:'Desk (IKEA MALM)'}, vol:.38, wt:25, cat:'furniture', urgency:'medium', repl:1300}},
+  {guess:{zh:'床上用品',en:'Bedding'}, truth:{zh:'床上用品',en:'Bedding'}, conf:.94, wrong:false, patch:null},
+  {guess:{zh:'电饭煲',en:'Rice cooker'}, truth:{zh:'电饭煲',en:'Rice cooker'}, conf:.88, wrong:false, patch:null}
+];
+
+/* ------------------------------ i18n ------------------------------ */
+let LANG = 'zh';
+const T = {
+  steps:{zh:['目的地','物品清单','搬迁计划','处置对比'],en:['Destination','Inventory','Move plan','Item recovery']},
+  go:{zh:'下一步',en:'Next'},
+  print:{zh:'打印 / PDF',en:'Print / PDF'},
+  assist:{zh:'物管协助模式',en:'Assisted mode'},
+  assistOn:{zh:'退出协助模式',en:'Exit assisted'},
+  hkd:{zh:'HK$',en:'HK$'},
+  vol:{zh:'m³',en:'m³'},
+  kg:{zh:'kg',en:'kg'},
+  cond:{good:{zh:'良好',en:'Good'},fair:{zh:'尚可',en:'Fair'},poor:{zh:'较差',en:'Poor'},broken:{zh:'已损坏',en:'Broken'},working:{zh:'可用',en:'Working'}},
+  urg:{immediate:{zh:'首晚必需',en:'Night 1 essential'},high:{zh:'高度急需',en:'High'},medium:{zh:'中等',en:'Medium'},low:{zh:'低优先',en:'Low priority'}},
+  st:{op:{zh:'运营中',en:'Operating'},pl:{zh:'计划中',en:'Planned'},no:{zh:'暂无',en:'None'}},
+  cat:{essential:{zh:'必需随身',en:'Essential'},daily:{zh:'日用品',en:'Daily'},kitchenware:{zh:'厨具',en:'Kitchenware'},
+       clothing:{zh:'衣物',en:'Clothing'},decor:{zh:'书与装饰',en:'Books & decor'},furniture:{zh:'家具',en:'Furniture'},
+       appliance_s:{zh:'小家电',en:'Small appliance'},appliance_m:{zh:'中型家电',en:'Appliance'},appliance_l:{zh:'大型家电',en:'Large appliance'},
+       electronics:{zh:'电子产品',en:'Electronics'}},
+  fac:{supermarket:{zh:'超市与日用',en:'Supermarket'},retail:{zh:'衣着零售',en:'Clothing retail'},furniture:{zh:'家具零售',en:'Furniture retail'},
+       appliance:{zh:'家电零售',en:'Appliance retail'},recycling:{zh:'回收点',en:'Recycling points'},delivery:{zh:'配送服务',en:'Delivery'},transport:{zh:'交通配套',en:'Transport'}},
+  trip:{
+    t1:{zh:'第 1 趟 · 首晚生存',en:'Trip 1 · Immediate living',when:{zh:'入住当天',en:'Move-in day'}},
+    t2:{zh:'第 2 趟 · 日常舒适',en:'Trip 2 · Daily comfort',when:{zh:'入住后 1–4 周',en:'1–4 weeks after'}},
+    t3:{zh:'第 3 趟 · 安顿可选',en:'Trip 3 · Optional settlement',when:{zh:'入住后 1–3 个月',en:'1–3 months after'}},
+    buy:{zh:'在香港购买',en:'Buy in Hong Kong',when:{zh:'按本地设施到位情况',en:'As local supply opens'}},
+    sz:{zh:'深圳侧待办（不带走）',en:'Shenzhen action list',when:{zh:'离深前处理',en:'Before leaving Shenzhen'}}
+  },
+  action:{T1:{zh:'第 1 趟带走',en:'Bring on trip 1'},T2:{zh:'第 2 趟带走',en:'Bring on trip 2'},
+          T3:{zh:'第 3 趟带走',en:'Bring on trip 3'},BUY:{zh:'在香港购买',en:'Buy in HK'},SZ:{zh:'深圳侧处理',en:'Handle in Shenzhen'}},
+  benefit:{cash:{zh:'现金回收',en:'Cash recovery'},subsidy:{zh:'购买补贴',en:'Purchase subsidy'},
+           free:{zh:'免费清运',en:'Free removal'},fee:{zh:'付费处置',en:'Paid disposal'},none:{zh:'无金钱收益',en:'No monetary gain'}},
+  benNote:{cash:{zh:'真实现金收入',en:'Actual cash received'},
+           subsidy:{zh:'购买新品时的折扣，不是回收款',en:'Discount on a new purchase — NOT a recycling payment'},
+           free:{zh:'免费上门移走，不含任何现金',en:'Free removal service — no cash involved'},
+           fee:{zh:'你需要支付费用',en:'You pay a fee'},
+           none:{zh:'不产生金钱收益',en:'No money changes hands'}},
+  feasible:{ok:{zh:'可操作',en:'Available'},cond:{zh:'有条件',en:'Conditional'},no:{zh:'不适用',en:'Not applicable'}},
+  conf:{high:{zh:'高',en:'High'},medium:{zh:'中',en:'Medium'},low:{zh:'低',en:'Low'}}
+};
+
+/* ------------------------------ state ------------------------------ */
+const S = {
+  estate:'kwutung', movein:'2026-09', household:'couple', origin:'futian', ntrips:3,
+  items: CATALOG.map(o=>({...o})),
+  unwanted: UNWANTED.map(o=>({...o})),
+  screen:1, assist:false, aiUsed:false, buyNew:false
+};
+
+const $  = s=>document.querySelector(s);
+const $$ = s=>[...document.querySelectorAll(s)];
+/* deep resolve: {zh,en} leaf -> string; recurse into containers */
+const L  = o => {
+  if(o===null||o===undefined) return o;
+  if(Array.isArray(o)) return o.map(L);
+  if(typeof o==='object'){
+    const ks = Object.keys(o);
+    if(ks.length===2 && 'zh' in o && 'en' in o) return o[LANG];
+    const r = {}; for(const k of ks) r[k]=L(o[k]); return r;
+  }
+  return o;
+};
+const T_ = new Proxy({}, { get:(_,k)=>L(T[k]) });
+const HKD = n => 'HK$' + Math.round(n).toLocaleString('en-US');
+const RATE = {base:60, vol:900, wt:3};   // 跨境搬运分摊模型（demo 参数）
+const CONDF = {good:1, fair:.7, poor:.35, broken:.05, working:.85};
+
+/* ====================== LAYER 2: RULE ENGINE ====================== */
+
+function transportCost(it){
+  return Math.round(RATE.base + it.vol*RATE.vol + it.wt*RATE.wt);
+}
+
+/* 合规检查：电器插头/电压 + 受管制废弃电器跨境 */
+function compliance(it){
+  const tr = [];
+  if(it.appliance){
+    if(!it.plugOk){
+      tr.push({k:'warn', detail:{zh:'插头为「'+it.plug+'」，不符合香港本地供应电器要求（220V/50Hz + 合规英标插头）。跨境电器未必可立即安全使用。',
+                                 en:'Plug type "'+ (it.plug==='国标两脚'||it.plug==='国标三脚' ? 'GB' : it.plug) +'" does not meet HK requirements (220V/50Hz + compliant plug).'}});
+    } else {
+      tr.push({k:'ok', detail:{zh:'电压/插头兼容（'+it.volt+'），无需改装。',en:'Voltage/plug compatible ('+it.volt+').'}});
+    }
+    if(it.regulated && it.side==='sz' && it.unwanted){
+      return {level:'blocked', notes:tr.concat([{k:'block', detail:{zh:'属受管制电器设备。香港对废弃受管制电器设备的进出口有管制，个人行李非贸易用途或可豁免，但实际情形须向海关/环保署确认。本系统不提供清关结论。',
+        en:'Regulated electrical equipment. HK controls import/export of abandoned regulated e-equipment; personal baggage may be exempt but must be confirmed with Customs/EPD. This system gives no clearance advice.'}}]),
+        src:['customs','emsd']};
+    }
+    return {level: tr.some(t=>t.k==='warn') ? 'caution' : 'ok', notes:tr, src:['emsd']};
+  }
+  return {level:'ok', notes:[{k:'ok',detail:{zh:'非电器类，无电气合规限制。',en:'Non-electrical item; no electrical compliance constraint.'}}], src:[]};
+}
+
+/* 搬迁侧决策：返回 action + trace */
+function decideMove(it, ctx){
+  const est = ESTATES[S.estate];
+  const fkey = CAT2F[it.cat] || 'supermarket';
+  const fac  = est.f[fkey];
+  const cmp  = compliance(it);
+  const tr   = [];
+
+  tr.push({k:'rule', label:{zh:'① 合规检查',en:'1. Compliance'}, v:{zh:cmp.level==='blocked'?'阻断':cmp.level==='caution'?'需注意':'通过',
+      en:cmp.level==='blocked'?'Blocked':cmp.level==='caution'?'Caution':'Pass'}, hl:cmp.level!=='ok', bad:cmp.level==='blocked',
+      d:cmp.notes.map(n=>n.detail).concat([])});
+
+  if(cmp.level==='blocked'){
+    return {action:'SZ', trip:'sz', conf:'high', trace:tr, flags:['customs'],
+      why:{zh:'受管制电器，不得凭本系统结论跨境运输 —— 转由深圳侧处置。',
+           en:'Regulated appliance: must not be shipped on the basis of this system. Routed to Shenzhen handling.'}};
+  }
+
+  const urg = it.urgency;
+  tr.push({k:'fact', label:{zh:'② 急迫性',en:'2. Urgency'}, v:T_.urg[urg],
+    d:[{zh: it.essential ? '标记为不可替代 / 首晚必需。' : '按使用时间点排序。',
+        en: it.essential ? 'Marked irreplaceable / night-one essential.' : 'Ranked by when it is actually needed.'}]});
+
+  const avail = fac.avail;
+  tr.push({k:'fact', label:{zh:'③ 目的地可获得性',en:'3. Local availability'},
+    v: Math.round(avail*100)+'% · '+T_.fac[fkey],
+    hl: avail<.4,
+    d:[{zh: est.zh+'｜'+T_.fac[fkey]+'：'+T_.st[fac.st]+'（'+fac.eta.zh+'）',
+        en: est.en+' — '+T_.fac[fkey]+': '+T_.st[fac.st]+' ('+fac.eta.en+')'}]});
+
+  const tc = transportCost(it);
+  tr.push({k:'fact', label:{zh:'④ 跨境运输成本',en:'4. Transport cost'}, v:HKD(tc),
+    d:[{zh: '体积 '+it.vol+' m³ × '+RATE.vol+' + 重量 '+it.wt+' kg × '+RATE.wt+' + 基础分摊 '+RATE.base,
+        en: 'Volume '+it.vol+'m³ × '+RATE.vol+' + weight '+it.wt+'kg × '+RATE.wt+' + base '+RATE.base}]});
+
+  const repl = it.repl;
+  tr.push({k:'fact', label:{zh:'⑤ 香港重置成本',en:'5. Replacement cost in HK'},
+    v: repl==null ? {zh:'不可替代',en:'Irreplaceable'} : HKD(repl),
+    d: repl==null ? [{zh:'无法用金钱重置（证件、药品等）。',en:'Cannot be replaced by purchase.'}]
+                  : [{zh:'在香港同类购置的估计价格。',en:'Estimated price to buy equivalent in HK.'}]});
+
+  // 两种方案的实际代价：带走只付运费；当地重购要付重置价，且本地越难买实际代价越高
+  const buyEff = repl==null ? null : Math.round(repl * (1 + (1-avail)*0.8));
+  const pct = Math.round(avail*100);
+  const etaTxt = L(fac.eta);
+  const tripOf = u => (u==='immediate'||u==='high') ? 'T1' : u==='medium' ? 'T2' : 'T3';
+
+  let action, rule, conf='high', why, calc;
+
+  if(repl==null || it.essential){
+    action='T1'; rule='essential';
+    why={zh:'不可替代或首晚必需 —— 不参与经济比较，直接进第 1 趟。',
+         en:'Irreplaceable or night-one essential: excluded from the economic comparison, placed in trip 1.'};
+    calc='不可替代 → 不参与经济比较\n→ Trip 1';
+  }
+  else if(it.appliance && !it.plugOk){
+    if(avail >= .35){
+      action='BUY'; rule='compliance';
+      why={zh:'插头/电压不符合香港要求（'+it.plug+'），不应跨境直接使用。建议抵港后购买合规版本。',
+           en:'Plug/voltage does not meet HK requirements ('+it.plug+'). Buy a compliant version after arrival instead of shipping it.'};
+      calc='合规检查 = 未通过（'+it.plug+'）\n当地家电零售可获得性 '+pct+'% ≥ 35% → 可购买合规版本\n→ 在香港购买';
+    } else {
+      action=tripOf(urg); rule='compliance_fallback'; conf='low';
+      why={zh:'电器不合规，但'+est.zh+'的'+T_.fac[fkey]+'仅 '+pct+'%（'+etaTxt+'），当地暂买不到 → 只能带走，但必须更换合规插头并经检验后使用。',
+           en:'Non-compliant, but '+T_.fac[fkey]+' near '+est.en+' is only '+pct+'% ('+etaTxt+'); buying locally is not yet possible. Take it, but replace the plug and have it checked before use.'};
+      calc='合规检查 = 未通过（'+it.plug+'）\n当地'+T_.fac[fkey]+'可获得性 '+pct+'% < 35% → 当地购买暂不可行\n降级：带走 + 强制安全处理\n置信度降为「低」，需人工复核';
+    }
+  }
+  else if(CONSUMABLE[it.cat] && avail >= .5){
+    action='BUY'; rule='consumable';
+    why={zh:'属日用消耗品，'+est.zh+'本地超市可获得性 '+pct+'% → 抵达后购买即可，不占用跨境运输额度。',
+         en:'A consumable; supermarket availability near '+est.en+' is '+pct+'%. Buy on arrival rather than spending cross-border capacity on it.'};
+    calc='运输成本 '+HKD(tc)+' vs 物品价值 '+HKD(repl)+'\n本地可获得性 '+pct+'% ≥ 50% → 当地购买';
+  }
+  else if(tc > repl*0.6 && avail >= .4){
+    action='BUY'; rule='bulky_cheap'; conf='medium';
+    why={zh:'运输成本 '+HKD(tc)+' 已超过重置价 '+HKD(repl)+' 的 60%，且本地可获得性 '+pct+'% → 当地购买更合理。',
+         en:'Transport '+HKD(tc)+' exceeds 60% of replacement ('+HKD(repl)+') and local availability is '+pct+'%: buying locally is better.'};
+    calc='运输 '+HKD(tc)+' > 重置价 '+HKD(repl)+' × 0.6 = '+HKD(repl*0.6)+'\n本地可获得性 '+pct+'% ≥ 40%\n→ 在香港购买';
+  }
+  else {
+    action=tripOf(urg); rule='economic';
+    conf = (tc > repl*0.45) ? 'medium' : 'high';
+    why={zh:'运输成本 '+HKD(tc)+' 低于当地重购的实际代价 '+HKD(buyEff)+'（重置价 '+HKD(repl)+' × 本地稀缺系数）→ 带走更划算，按急迫性排入「'+T_.action[action]+'」。',
+         en:'Transport '+HKD(tc)+' is below the effective cost of rebuying ('+HKD(buyEff)+' = '+HKD(repl)+' × local scarcity factor): take it, scheduled by urgency.'};
+    calc='带走成本 = 运输                '+HKD(tc)+'\n当地重购 = 重置价 '+HKD(repl)+' × (1 + (1 − '+avail.toFixed(2)+') × 0.8) = '+HKD(buyEff)+'\n'+HKD(tc)+' < '+HKD(buyEff)+'  →  带走（'+T_.action[action]+'）';
+  }
+
+  const econ = !(rule==='compliance' || rule==='compliance_fallback' || rule==='essential');
+  tr.push({k:'calc', label:{zh:'⑥ 两种方案代价',en:'6. Cost of each option'},
+    v: econ ? HKD(tc)+' vs '+HKD(buyEff) : {zh:'不适用 —— 由更高优先级规则决定',en:'n/a — a higher-priority rule decides this'},
+    d:[ econ
+      ? {zh:'带走只需付运费；当地重购要付重置价，并随本地稀缺程度放大。',
+         en:'Moving costs only freight; rebuying costs the replacement price, scaled up by local scarcity.'}
+      : {zh:'合规与不可替代性优先于经济比较，本条不按成本高低取舍。',
+         en:'Compliance and irreplaceability outrank the economic comparison; cost does not decide this item.'}]});
+
+  tr.push({k:'rule', label:{zh:'⑦ 决策规则',en:'7. Decision rule'}, v:L(why),
+    hl:rule!=='compliance_fallback', bad:rule==='compliance_fallback', calc:calc});
+  tr.push({k:'fact', label:{zh:'⑧ 置信度',en:'8. Confidence'}, v:T_.conf[conf],
+    d:[ conf==='low'
+      ? {zh:'存在未解决的合规问题或信息缺口，置信度降为「低」。执行前须人工复核，并向机电工程署或相关机构确认。',
+         en:'An unresolved compliance issue or information gap: confidence is low. Review manually and confirm with EMSD or the relevant body before acting.'}
+      : (conf==='medium'
+        ? {zh:'两个方案代价较接近（运输成本超过重置价 45%），置信度为「中」，建议复核后再决定。',
+           en:'The two options are close (transport exceeds 45% of replacement cost): medium confidence, review before deciding.'}
+        : {zh:'规则判定明确，且不涉及未解决的合规问题。',
+           en:'The rule outcome is clear and no unresolved compliance issue applies.'})]});
+
+  return {action:action, trip:action==='BUY'?'buy':'t'+action[1], conf:conf, trace:tr, why:why,
+          rule:rule, flags: cmp.level==='caution' ? ['emsd'] : [],
+          numbers:{tc:tc, repl:repl, buyEff:buyEff, avail:avail}};
+}
+
+/* 处置侧：构建候选渠道并计算净结果 */
+function buildOffers(it){
+  const O = [];
+  const spare = it.cond==='working' || it.cond==='good' || it.cond==='fair';
+
+  // 1. 深圳二手转卖（买家自提）
+  if(spare && (it.resale||0)>0){
+    O.push({id:'sell', name:{zh:'深圳二手转卖（平台自提）',en:'Sell second-hand in Shenzhen (buyer collects)'}, side:'sz',
+      ben:'cash', prio:3, feas:'ok',
+      v:{value:it.resale, subsidy:0, transport:0, handling:0, disposal:0},
+      note:{zh:'需自行议价与交接，平台不担保成交；成交价随成色浮动，须与买方最终确认。',
+            en:'You negotiate and hand over yourself; no guaranteed sale. Final price must be confirmed with the buyer.'},
+      src:['furniture']});
+  } else {
+    O.push({id:'sell', name:{zh:'深圳二手转卖（平台自提）',en:'Sell second-hand in Shenzhen (buyer collects)'}, side:'sz',
+      ben:'none', prio:3, feas:'no', v:{value:0,subsidy:0,transport:0,handling:0,disposal:0},
+      note:{zh:'当前成色（'+T_.cond[it.cond]+'）通常无人承接，不列入可行渠道。',
+            en:'Condition ('+T_.cond[it.cond]+') is normally not accepted; excluded.'}, src:['furniture']});
+  }
+
+  // 2. 公益捐赠
+  if(spare){
+    O.push({id:'donate', name:{zh:'深圳公益捐赠（机构上门）',en:'Donate to charity in Shenzhen (pickup)'}, side:'sz',
+      ben:'none', prio:3, feas:'cond', v:{value:0, subsidy:0, transport:0, handling:0, disposal:0},
+      note:{zh:'无金钱收益。机构通常只接受成色良好、无污损的物品，需提前确认是否上门及可收品类。',
+            en:'No monetary gain. Charities normally accept only clean, sound items; confirm pickup and accepted categories first.'},
+      src:['furniture']});
+  } else {
+    O.push({id:'donate', name:{zh:'深圳公益捐赠（机构上门）',en:'Donate to charity in Shenzhen (pickup)'}, side:'sz',
+      ben:'none', prio:3, feas:'no', v:{value:0,subsidy:0,transport:0,handling:0,disposal:0},
+      note:{zh:'成色不达标（'+T_.cond[it.cond]+'），捐赠渠道通常不予接收。',
+            en:'Condition ('+T_.cond[it.cond]+') is below typical donation acceptance.'}, src:['furniture']});
+  }
+
+  // 3. 深圳大件预约清运
+  O.push({id:'bulky', name:{zh:'深圳大件家具预约清运',en:'Shenzhen bulky-item appointment collection'}, side:'sz',
+    ben:'free', prio:1, feas:'cond', v:{value:0, subsidy:0, transport:0, handling:0, disposal:0},
+    note:{zh:'需先自行搬到指定临时堆放点，或联系物业管理处预约安排。免费属清运服务，不含任何现金。',
+          en:'Move the item to a designated temporary point first, or book via property management. Free service; no cash.'},
+    src:['szbulky']});
+
+  // 4. 家电以旧换新补贴 —— 购买补贴，不是回收款；未声明购新则不参与排序
+  if(it.appliance){
+    const sub = Math.round(1500 * 1.09);   // RMB 1500 上限折算 HKD（demo 汇率）
+    O.push({id:'tradein', name:{zh:'深圳家电以旧换新补贴',en:'Shenzhen appliance trade-in subsidy'}, side:'sz',
+      ben:'subsidy', prio:2, feas:'cond', locked: !S.buyNew,
+      v:{value:0, subsidy:sub, transport:0, handling:0, disposal:0},
+      note: S.buyNew
+        ? {zh:'这是「购买新机时的 15% 折扣，单件上限 RMB 1,500」，不是把旧机卖掉拿钱。上面的净额不含你必须支付的新机价款，仅在你本就打算购新时才成立。',
+           en:'A 15% discount on a NEW purchase (cap RMB1,500) — not payment for your old unit. The net figure excludes what you must spend on the new appliance, and only applies if you were buying one anyway.'}
+        : {zh:'本渠道是购买新机的折扣，不是回收款。在你勾选「计划在深圳购买新家电」之前，它不参与推荐排序 —— 系统不会把补贴冒充成回收收入。',
+           en:'This is a discount on a new purchase, not a recycling payment. It stays out of the ranking until you tick "planning to buy a new appliance" — the system never passes a subsidy off as recovery income.'},
+      src:['szsub']});
+  }
+
+  // 5. 香港 WPRS 免费除旧
+  if(it.regulated){
+    const tc = transportCost(it);
+    O.push({id:'wprs', name:{zh:'香港 WPRS 免费除旧（购新时安排）',en:'HK WPRS free removal (with new purchase)'}, side:'hk',
+      ben:'free', prio:1, feas:'no', v:{value:0, subsidy:0, transport:0, handling:0, disposal:0},
+      note:{zh:'在香港购买受管制电器时，卖家须应要求免费移走同类旧电器——是移除服务，不是现金付款。但本件在深圳：跨境运废弃受管制电器受管制，且运输成本约 '+HKD(tc)+'，本渠道实际不可行。',
+            en:'When buying a regulated appliance in HK the seller must arrange free removal of the same class — a service, not cash. But this unit is in Shenzhen: shipping abandoned regulated e-equipment across the boundary is controlled, and transport alone is ~'+HKD(tc)+'. Not workable here.'},
+      src:['wprs','customs']});
+  }
+
+  // 6. 香港付费清运
+  {
+    const tc = transportCost(it);
+    O.push({id:'hkpaid', name:{zh:'运至香港后付费清运',en:'Ship to HK then paid disposal'}, side:'hk',
+      ben:'fee', prio:0, feas: it.regulated ? 'no' : 'cond',
+      v:{value:0, subsidy:0, transport:tc, handling:0, disposal:320},
+      note: it.regulated
+        ? {zh:'受管制电器不得凭本系统结论跨境运输，此渠道不予推荐。',en:'Regulated e-equipment must not be shipped on this system\'s advice; channel not recommended.'}
+        : {zh:'跨境运输 '+HKD(tc)+' + 处置费 '+HKD(320)+'。除非物品确有留港必要，否则不划算。',
+           en:'Transport '+HKD(tc)+' + disposal '+HKD(320)+'. Rarely worthwhile unless the item must reach HK.'},
+      src:['customs','furniture']});
+  }
+
+  // 7. 深圳废品回收（按重量，仅损坏件）
+  if(it.cond==='broken'){
+    const rv = Math.round(it.wt * 2.2);
+    O.push({id:'scrap', name:{zh:'深圳废品回收（按重量）',en:'Shenzhen scrap recycling (by weight)'}, side:'sz',
+      ben:'cash', prio:2, feas:'ok', v:{value:rv, subsidy:0, transport:0, handling:0, disposal:0},
+      note:{zh:'按 '+it.wt+' kg × 约 HK$2.2/kg 估算的废金属回收价，实际价格随行情浮动。',
+            en:'Estimated at '+it.wt+'kg × ~HK$2.2/kg scrap metal; actual price fluctuates.'}, src:['szbulky']});
+  }
+
+  O.forEach(o=>{ o.net = o.v.value + o.v.subsidy - o.v.transport - o.v.handling - o.v.disposal; });
+  // 排序：先看净结果，净结果相同时优先「重用 > 回收 > 处置」（政府口径：家具重用通常优于拆解回收）
+  const viable = O.filter(o=>o.feas!=='no' && !o.locked);
+  const best = viable.slice().sort((a,b)=>(b.net-a.net)||((b.prio||0)-(a.prio||0)))[0] || O[0];
+  O.forEach(o=>{ o.best = (o===best && o.feas!=='no' && !o.locked); });
+  return {offers:O, best:best};
+}
+
+/* ====================== LAYER 3: RENDER ====================== */
+
+function renderSteps(){
+  $('#steps').innerHTML = T_.steps.map((s,i)=>{
+    const n=i+1, on=S.screen===n, done=S.screen>n;
+    return '<button class="step '+(on?'on':'')+' '+(done?'done':'')+'" data-go="'+n+'"><span class="n">'+(done?'✓':n)+'</span>'+s+'</button>';
+  }).join('');
+}
+
+/* ---------- screen 1 ---------- */
+function renderEstates(){
+  $('#estates').innerHTML = Object.entries(ESTATES).map(([k,e])=>{
+    const vals = Object.values(e.f);
+    const mat = vals.reduce((a,b)=>a+b.avail,0)/vals.length;
+    const rows = Object.entries(e.f).map(([fk,f])=>
+      '<div class="frow"><span>'+T_.fac[fk]+'</span><span class="pill p-'+(f.st==='op'?'op':f.st==='pl'?'pl':'no')+'">'+T_.st[f.st]+' · '+L(f.eta)+'</span></div>'
+    ).join('');
+    return '<button class="estate '+(S.estate===k?'on':'')+'" data-estate="'+k+'">'+
+      '<h4>'+e.zh+'<span class="en">'+e.en+'</span></h4>'+
+      '<div class="mat"><div class="matbar"><div class="matfill" style="width:'+Math.round(mat*100)+'%"></div></div>'+
+      '<span class="matv">'+Math.round(mat*100)+'%</span></div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+L(e.note)+'</div>'+
+      rows+'</button>';
+  }).join('');
+}
+
+const MOVEIN = (()=>{const a=[];for(let y=2026;y<=2028;y++)for(let m=1;m<=12;m+=3){a.push(y+'-'+String(m).padStart(2,'0'));}return a;})();
+const HH = [{k:'single',zh:'单人',en:'Single'},{k:'couple',zh:'两人（伴侣）',en:'Couple'},{k:'family',zh:'家庭（含儿童）',en:'Family with children'},{k:'elderly',zh:'与长辈同住',en:'With elderly'}];
+const ORIGIN = [{k:'futian',zh:'福田',en:'Futian'},{k:'nanshan',zh:'南山',en:'Nanshan'},{k:'longhua',zh:'龙华',en:'Longhua'},{k:'baoan',zh:'宝安',en:"Bao'an"},{k:'luohu',zh:'罗湖',en:'Luohu'}];
+const NTR = [2,3,4,5];
+
+function fillSelects(){
+  $('#movein').innerHTML = MOVEIN.map(m=>'<option value="'+m+'">'+m+'</option>').join('');
+  $('#household').innerHTML = HH.map(o=>'<option value="'+o.k+'">'+o[LANG]+'</option>').join('');
+  $('#origin').innerHTML = ORIGIN.map(o=>'<option value="'+o.k+'">'+o[LANG]+'</option>').join('');
+  $('#ntrips').innerHTML = NTR.map(n=>'<option value="'+n+'">'+n+' 趟</option>').join('');
+  $('#movein').value=S.movein; $('#household').value=S.household; $('#origin').value=S.origin; $('#ntrips').value=S.ntrips;
+}
+
+function renderS1(){
+  renderEstates();
+  const e = ESTATES[S.estate];
+  $('#t1note').innerHTML = '<b>'+L({zh:'为什么这一步最关键',en:'Why this step matters'})+'：</b>' + L(e.note) +
+    ' <span style="opacity:.8">（'+L({zh:'来源',en:'Source'})+': '+srcLink('nm')+' · '+srcLink('phasing')+'）</span>';
+}
+
+function srcLink(k){
+  const s = SRC[k]; if(!s) return '';
+  return '<a href="'+s.url+'" target="_blank" rel="noopener">'+s[LANG]+'</a>';
+}
+
+/* ---------- screen 2 ---------- */
+function allItems(){ return S.items.concat(S.unwanted); }
+
+function renderInventory(){
+  const rows = S.items.map(it=>{
+    const cmp = compliance(it);
+    const flagtags = [];
+    if(it.appliance && !it.plugOk) flagtags.push('<span class="tag warn">'+(LANG==='zh'?'插头不符':'Plug non-compliant')+'</span>');
+    if(it.regulated) flagtags.push('<span class="tag info">'+(LANG==='zh'?'受管制电器':'Regulated')+'</span>');
+    if(it.aiTouched) flagtags.push('<span class="tag ai">'+(LANG==='zh'?'AI 已识别':'AI tagged')+'</span>');
+    return '<tr data-id="'+it.id+'">'+
+      '<td><b>'+L({zh:it.zh,en:it.en})+'</b><br><span class="tag">'+T_.cat[it.cat]+'</span></td>'+
+      '<td>'+T_.cond[it.cond]+'</td>'+
+      '<td class="num">'+it.vol+' / '+it.wt+'</td>'+
+      '<td>'+T_.urg[it.urgency]+'</td>'+
+      '<td class="num">'+(it.repl==null?'—':HKD(it.repl))+'</td>'+
+      '<td>'+flagtags.join(' ')+'</td>'+
+      '<td class="num"><button class="btn sm ghost" data-edit="'+it.id+'">'+(LANG==='zh'?'编辑':'Edit')+'</button></td>'+
+    '</tr>';
+  }).join('');
+  const urows = S.unwanted.map(it=>{
+    const tags = ['<span class="tag">'+(LANG==='zh'?'深圳侧':'In Shenzhen')+'</span>'];
+    if(it.regulated) tags.push('<span class="tag info">'+(LANG==='zh'?'受管制电器':'Regulated')+'</span>');
+    return '<tr class="sz" data-id="'+it.id+'">'+
+      '<td><b>'+L({zh:it.zh,en:it.en})+'</b><br>'+tags.join(' ')+'</td>'+
+      '<td>'+T_.cond[it.cond]+'</td>'+
+      '<td class="num">'+it.vol+' / '+it.wt+'</td>'+
+      '<td>'+(LANG==='zh'?'待处置':'To handle')+'</td>'+
+      '<td class="num">—</td>'+
+      '<td><span class="tag dang">'+(LANG==='zh'?'不带走':'Not moved')+'</span></td>'+
+      '<td class="num"><button class="btn sm ghost" data-edit="'+it.id+'">'+(LANG==='zh'?'编辑':'Edit')+'</button></td>'+
+    '</tr>';
+  }).join('');
+
+  $('#invtable').innerHTML =
+    '<table class="tbl"><thead><tr><th>'+(LANG==='zh'?'物品':'Item')+'</th><th>'+(LANG==='zh'?'状况':'Condition')+
+    '</th><th class="num">'+(LANG==='zh'?'体积/重量':'m³ / kg')+'</th><th>'+(LANG==='zh'?'急迫性':'Urgency')+
+    '</th><th class="num">'+(LANG==='zh'?'香港重置价':'HK replacement')+'</th><th>'+(LANG==='zh'?'标记':'Flags')+'</th><th></th></tr></thead>'+
+    '<tbody>'+rows+urows+'</tbody></table>';
+
+  $('#invcount').textContent = S.items.length+' + '+S.unwanted.length+' '+(LANG==='zh'?'件（含深圳侧待处置）':'items (incl. Shenzhen-side)');
+}
+
+function renderAIBox(){
+  $('#airesults').innerHTML = AI_MOCK.map((m,i)=>{
+    const ok = !m.wrong;
+    return '<div style="border:1px solid '+(ok?'var(--line)':'#e5d4f5')+';background:'+(ok?'#fff':'#faf7fe')+
+      ';border-radius:8px;padding:11px 13px;margin-bottom:9px">'+
+      '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">'+
+        '<div><b>'+L(m.guess)+'</b> <span class="tag '+(ok?'ok':'ai')+'">'+(ok?(LANG==='zh'?'已确认':'Confirmed'):(LANG==='zh'?'识别有误':'Misidentified'))+'</span>'+
+        '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+(LANG==='zh'?'置信度':'Confidence')+' '+Math.round(m.conf*100)+'%</div></div>'+
+        (ok?'':'<button class="btn sm" data-fix="'+i+'">'+(LANG==='zh'?'纠正为「'+L(m.truth)+'」':'Correct to "'+L(m.truth)+'"')+'</button>')+
+      '</div>'+
+      (ok?'':'<div style="font-size:11.5px;color:#5b3a9e;margin-top:7px">'+
+        (LANG==='zh'?'系统提示：AI 无法判定物品状况与是否被机构接受，识别结果必须由你确认。':'System note: AI cannot judge condition or acceptance by an organisation. You must confirm.')+
+        '</div>')+
+    '</div>';
+  }).join('');
+}
+
+/* ---------- screen 3 ---------- */
+function computePlan(){
+  const out = {t1:[],t2:[],t3:[],buy:[],sz:[]};
+  S.items.forEach(it=>{ const d = decideMove(it); out[d.trip].push({it:it, d:d}); });
+  S.unwanted.forEach(it=>{ out.sz.push({it:it, d:{action:'SZ', trip:'sz', conf:'high'}}); });
+  return out;
+}
+
+function renderPlan(){
+  const plan = computePlan();
+  const defs = [['t1','t1'],['t2','t2'],['t3','t3'],['buy','buy'],['sz','sz']];
+  $('#trips').innerHTML = defs.map(([k,cls])=>{
+    const t = T_.trip[k];
+    const list = plan[k];
+    const body = list.length ? list.map(x=>
+      '<div class="item'+(x.it.aiTouched?' ai-src':'')+'" data-open="'+x.it.id+'">'+
+        '<div class="dot"></div><div class="nm">'+L({zh:x.it.zh,en:x.it.en})+
+          '<small>'+T_.cat[x.it.cat]+(x.it.appliance&&!x.it.plugOk?' · '+(LANG==='zh'?'插头需注意':'plug caution'):'')+'</small></div>'+
+        '<div class="cost">'+(k==='sz'||k==='buy' ? '' : HKD(x.d.numbers?x.d.numbers.tc:transportCost(x.it)))+'</div>'+
+      '</div>').join('')
+      : '<div class="empty">'+(LANG==='zh'?'本阶段无物品':'Nothing in this stage')+'</div>';
+    const ic = k==='t1'?'1':k==='t2'?'2':k==='t3'?'3':k==='buy'?'$':'深';
+    return '<div class="trip '+cls+'"><div class="triph"><div class="ic">'+ic+'</div>'+
+      '<div><h4>'+t[LANG]+'</h4><span class="when">'+L(t.when)+'</span></div></div>'+
+      '<div class="tripb">'+body+'</div></div>';
+  }).join('');
+
+  const moved = plan.t1.length+plan.t2.length+plan.t3.length;
+  const vol = plan.t1.concat(plan.t2,plan.t3).reduce((a,b)=>a+b.it.vol,0);
+  const saved = plan.buy.reduce((a,b)=>a+(b.d.numbers?b.d.numbers.tc:0),0);
+  $('#t3sum').innerHTML = '<b>'+(LANG==='zh'?'计划已生成':'Plan generated')+'：</b>'+
+    (LANG==='zh'
+      ? '共 '+allItems().length+' 件物品。带走 '+moved+' 件（合计约 '+vol.toFixed(2)+' m³），'+plan.buy.length+' 件建议香港购买，'+S.unwanted.length+' 件转入深圳侧处置。相比全部带走，预计节省跨境运输约 '+HKD(saved)+'。'
+      : allItems().length+' items. '+moved+' to move (~'+vol.toFixed(2)+' m³), '+plan.buy.length+' to buy in HK, '+S.unwanted.length+' routed to Shenzhen handling. Estimated transport saving vs moving everything: ~'+HKD(saved)+'.');
+
+  const flags = [];
+  S.items.concat(S.unwanted).forEach(it=>{
+    const c = compliance(it);
+    if(c.level!=='ok'){
+      const line = c.notes.filter(n=>n.k!=='ok').map(n=>L(n.detail)).join(' ');
+      flags.push({it:it, level:c.level, text:line, src:c.src});
+    }
+  });
+  $('#t3flags').innerHTML = flags.length ? flags.map(f=>{
+    const cls = f.level==='blocked'?'n-dang':'n-warn';
+    return '<div class="notice '+cls+'" style="margin-bottom:8px"><span class="ic">'+(f.level==='blocked'?'×':'!')+'</span><div>'+
+      '<b>'+L({zh:f.it.zh,en:f.it.en})+'</b> — '+f.text+
+      '<div class="srcs">'+f.src.map(srcLink).join(' · ')+'</div></div></div>';
+  }).join('') : '<div class="hint">'+(LANG==='zh'?'无合规提示。':'No compliance flags.')+'</div>';
+
+  const e = ESTATES[S.estate];
+  $('#phmeta').innerHTML = (LANG==='zh'?'目的地':'Destination')+': '+e.zh+'（'+e.en+'） · '+
+    (LANG==='zh'?'入住':'Move-in')+': '+S.movein+' · '+
+    (LANG==='zh'?'生成日期':'Generated')+': '+new Date().toISOString().slice(0,10)+' · '+
+    (LANG==='zh'?'本计划为决策支持，不构成清关或法律意见':'Decision support only; not customs or legal advice');
+  $('#pfoot').innerHTML = (LANG==='zh'
+    ? '运输成本为 demo 估算参数（基础 HK$'+RATE.base+' + HK$'+RATE.vol+'/m³ + HK$'+RATE.wt+'/kg），正式版本须以实际报价替换。所有设施状态标注最后核查日期，计划中设施不得视为现已可用。'
+    : 'Transport costs are demo parameters (base HK$'+RATE.base+' + HK$'+RATE.vol+'/m³ + HK$'+RATE.wt+'/kg). Planned facilities must not be treated as available.');
+}
+
+/* ---------- screen 4 ---------- */
+function renderRecovery(){
+  const chk = $('#buyNewChk'); if(chk) chk.checked = S.buyNew;
+  $('#recovery').innerHTML = S.unwanted.map(it=>{
+    const {offers,best} = buildOffers(it);
+    const cards = offers.map(o=>{
+      const n = o.net;
+      const cls = n>0?'pos':n<0?'neg':'zero';
+      return '<div class="offer '+(o.best?'best':'')+' '+(o.feas==='no'||o.locked?'blocked':'')+'">'+
+        '<div class="oh"><div><div class="on">'+L(o.name)+'</div><div class="side">'+
+          (o.side==='sz'?(LANG==='zh'?'深圳渠道':'Shenzhen'):(LANG==='zh'?'香港渠道':'Hong Kong'))+
+          ' · '+T_.feasible[o.feas]+'</div></div>'+
+          (o.best?'<span class="obad">'+(LANG==='zh'?'推荐':'BEST')+'</span>':
+            (o.feas==='no'?'<span class="obad r">'+(LANG==='zh'?'不适用':'N/A')+'</span>':
+              (o.locked?'<span class="obad r" style="background:#8a9490">'+(LANG==='zh'?'需先购新':'Needs new purchase')+'</span>':'')))+
+        '</div>'+
+        '<div class="net '+cls+'">'+(n>0?'+':n<0?'−':'')+HKD(Math.abs(n)).replace('HK$','HK$')+'</div>'+
+        '<div style="font-size:11px;color:var(--muted);margin-bottom:7px">'+
+          '<span class="tag '+(o.ben==='cash'?'ok':o.ben==='subsidy'?'info':o.ben==='free'?'':'warn')+'">'+T_.benefit[o.ben]+'</span>'+
+        '</div>'+
+        '<div class="bk"><span>'+(LANG==='zh'?'转卖/回收价值':'Recovery value')+'</span><span class="bl">+'+(o.v.value?HKD(o.v.value):'0')+'</span></div>'+
+        (o.v.subsidy?'<div class="bk"><span>'+(LANG==='zh'?'购买补贴（非回收款）':'Purchase subsidy (not recycling)')+'</span><span class="bl">+'+HKD(o.v.subsidy)+'</span></div>':'')+
+        (o.v.transport?'<div class="bk"><span>'+(LANG==='zh'?'运输费':'Transport')+'</span><span class="bl" style="color:var(--danger)">−'+HKD(o.v.transport)+'</span></div>':'')+
+        (o.v.handling?'<div class="bk"><span>'+(LANG==='zh'?'处理费':'Handling')+'</span><span class="bl" style="color:var(--danger)">−'+HKD(o.v.handling)+'</span></div>':'')+
+        (o.v.disposal?'<div class="bk"><span>'+(LANG==='zh'?'处置费':'Disposal fee')+'</span><span class="bl" style="color:var(--danger)">−'+HKD(o.v.disposal)+'</span></div>':'')+
+        '<div class="bk tot"><span>'+(LANG==='zh'?'净结果':'Net result')+'</span><span>'+(n>0?'+':n<0?'−':'')+HKD(Math.abs(n))+'</span></div>'+
+        '<div class="onote'+(o.ben==='subsidy'?' warn':'')+'">'+L(o.note)+'</div>'+
+        '<div class="srcs">'+o.src.map(srcLink).join(' · ')+'</div>'+
+      '</div>';
+    }).join('');
+    return '<div class="rcard"><div class="rhead"><h4>'+L({zh:it.zh,en:it.en})+'</h4>'+
+      '<span class="cond">'+T_.cond[it.cond]+' · '+it.vol+' m³ · '+it.wt+' kg</span>'+
+      (it.regulated?'<span class="tag info">'+(LANG==='zh'?'受管制电器':'Regulated')+'</span>':'')+
+      '</div><div class="offers">'+cards+'</div></div>';
+  }).join('');
+
+  $('#legend').innerHTML = Object.keys(T_.benefit).map(k=>
+    '<div style="display:flex;gap:8px;align-items:flex-start"><span class="tag '+(k==='cash'?'ok':k==='subsidy'?'info':k==='fee'?'warn':'')+'">'+T_.benefit[k]+'</span>'+
+    '<span style="font-size:11.5px;color:var(--muted)">'+T_.benNote[k]+'</span></div>').join('');
+
+  $('#srcs4').innerHTML = '<b>'+(LANG==='zh'?'数据源与核查日期':'Sources & verification dates')+'</b>'+
+    ['wprs','szsub','szbulky','furniture','customs'].map(k=>{
+      const s=SRC[k];
+      return '<div>· '+srcLink(k)+' <span class="mono">('+(LANG==='zh'?'核查':'verified')+' '+s.v+')</span></div>';
+    }).join('');
+}
+
+/* ---------- drawer: decision trace ---------- */
+function openTrace(id){
+  const it = allItems().find(x=>x.id===id); if(!it) return;
+  const d = decideMove(it);
+  const isSZ = it.unwanted;
+  const vcls = d.action==='SZ'?'v-sz':d.action==='BUY'?'v-buy':'v-move';
+  const traceHtml = d.trace.map(t=>{
+    const cls = t.bad?'bad':t.wr?'wr':(t.hl?'hl':'');
+    const dets = (t.d||[]).filter(x=>L(x)).map(x=>'<em>'+L(x)+'</em>').join('');
+    return '<div class="tr '+cls+'"><div class="k">'+L(t.label)+'</div><div class="v"><b>'+L(t.v)+'</b>'+dets+
+      (t.calc?'<div class="calc">'+t.calc+'</div>':'')+'</div></div>';
+  }).join('');
+
+  let extra = '';
+  if(isSZ){
+    const {offers,best} = buildOffers(it);
+    extra = '<div style="margin-top:14px"><h4 style="font-size:13px;margin-bottom:8px">'+
+      (LANG==='zh'?'处置渠道对比':'Recovery channels')+'</h4>'+
+      '<div class="calc">'+offers.filter(o=>o.feas!=='no').map(o=>
+        L(o.name)+' → '+(o.net>0?'+':o.net<0?'−':'')+HKD(Math.abs(o.net))).join('\n')+
+      '\n\n'+(LANG==='zh'?'推荐':'Recommended')+': '+L(best.name)+'</div></div>';
+  }
+
+  $('#drawer').innerHTML =
+    '<button class="btn sm ghost close" data-close="1">'+(LANG==='zh'?'关闭 ✕':'Close ✕')+'</button>'+
+    '<h3>'+L({zh:it.zh,en:it.en})+'</h3>'+
+    '<div style="font-size:11.5px;color:var(--muted)">'+T_.cat[it.cat]+' · '+T_.cond[it.cond]+' · '+it.vol+' m³ · '+it.wt+' kg'+
+      (it.appliance?' · '+it.volt+' · '+it.plug:'')+'</div>'+
+    '<div class="verdict '+vcls+'"><span>'+(LANG==='zh'?'建议动作':'Recommended action')+'：'+T_.action[d.action]+'</span>'+
+      '<span class="pill p-op" style="background:rgba(255,255,255,.7)">'+(LANG==='zh'?'置信度':'Confidence')+' '+T_.conf[d.conf]+'</span></div>'+
+    '<div class="trace">'+traceHtml+'</div>'+ extra +
+    '<div class="notice n-info" style="margin-top:14px"><span class="ic">i</span><div>'+
+      (LANG==='zh'?'以上每一条都由规则与已核实数据得出，不是生成式 AI 的自由回答。涉及补贴、费用与资格的结论，须与提供方最终确认。':
+                  'Every line above comes from rules and verified data — not a generative guess. Subsidies, fees and eligibility must be confirmed with the provider.')+
+    '</div></div>'+
+    '<div class="srcs">'+['nm','phasing','recycle','emsd','customs'].map(srcLink).join(' · ')+'</div>';
+  $('#mask').classList.add('on');
+}
+
+/* ---------- i18n text application ---------- */
+function applyText(){
+  const z = LANG==='zh';
+  document.documentElement.lang = z?'zh-CN':'en';
+  $('#langBtn').textContent = z?'EN':'中文';
+  $('#assistBtn').textContent = S.assist?(z?'退出协助模式':'Exit assisted'):(z?'物管协助模式':'Assisted mode');
+  $('#printBtn').textContent = z?'打印 / PDF':'Print / PDF';
+  const set=(id,a,b)=>{const el=$(id); if(el) el.innerHTML = z?a:b;};
+
+  set('#assistbar','<b>物管协助模式</b> — 工作人员可代居民填写与讲解。本模式只要求屋苑与大致位置，不收集完整门牌地址；不收集身份证件或银行资料；居民可随时要求退出。',
+               '<b>Assisted mode</b> — staff can fill this in with the resident. Only estate and approximate location are collected, never a full address or ID/bank data. The resident can stop at any time.');
+  set('#t1h','目的地与家庭档案','Destination & household profile');
+  set('#t1p','所有建议都从「你搬到哪里、什么时候入住」开始。北部都会区各社区的设施成熟度差异很大，这直接决定哪些东西必须第一批带过去。',
+            'Every recommendation starts from where you are moving and when. Facility maturity differs sharply across Northern Metropolis communities, and that decides what must travel on trip one.');
+  set('#t1e','选择目的地社区','Choose the destination community');
+  set('#t1es','设施状态来自政府规划文件与开放数据，并标注最后核查日期。「计划中」的设施不会被当作现已可用。',
+             'Facility status comes from government plans and open data, each with a last-verified date. Planned facilities are never treated as currently available.');
+  set('#t1d','搬迁参数','Move parameters');
+  set('#l-movein','预计入住月份','Expected move-in month');
+  set('#l-household','家庭构成','Household');
+  set('#l-origin','深圳现居区域','Current district in Shenzhen');
+  set('#l-trips','预计可搬运趟数','Trips you can make');
+  set('#t1next','下一步：录入物品 →','Next: inventory →');
+
+  set('#t2h','物品清单','Inventory');
+  set('#t2p','AI 只负责减轻录入负担。识别结果一律可编辑，且永远不会当作物品状况的最终判定。',
+            'AI only reduces typing effort. Every recognition result is editable, and never treated as a final condition assessment.');
+  set('#t2warn','<b>隐私边界：</b>系统只收集屋苑或大致位置，不要求完整门牌地址；图片默认去除元数据并在识别后删除原图；不收集身份证件或银行资料；上传内容不会用于模型训练，除非另行取得明确同意。',
+               '<b>Privacy boundary:</b> the system collects an estate or approximate location, not a full address. Image metadata is stripped and originals deleted after classification. No ID documents or bank data. Uploads are never used for training without separate opt-in consent.');
+  set('#aiBtn','拍摄 / 导入照片（模拟识别）','Scan / import photos (simulated)');
+  set('#addBtn','+ 手动添加','+ Add manually');
+  set('#resetBtn','恢复默认清单','Reset to default list');
+  set('#t2hint','点击任意行的「编辑」可修改状况、体积重量与电器参数。修改后整份计划会重新计算。',
+               'Use "Edit" on any row to change condition, volume, weight or electrical attributes. The whole plan is recalculated.');
+  set('#t2ai','AI 识别结果（模拟）','AI recognition results (simulated)');
+  set('#t2ais','本 demo 使用预置结果，不调用真实视觉模型。注意下面第一个条目 —— 识别是错的，你可以纠正它。',
+               'This demo uses preset results and calls no real vision model. Note the first entry — the recognition is wrong, and you can correct it.');
+  set('#aiAccept','采纳并重新计算整份计划','Accept & recalculate the whole plan');
+  set('#aiClose','关闭','Close');
+  set('#t2next','生成分阶段计划 →','Generate phased plan →');
+
+  set('#t3h','分阶段搬迁计划','Phased relocation plan');
+  set('#t3p','点击任意物品可展开完整决策链 —— 它为什么在这个阶段，而不是别的阶段。',
+            'Click any item to open its full decision trace — why it sits in this stage and not another.');
+  set('#t3c','合规与不确定性提示','Compliance & uncertainty flags');
+  set('#t3next','查看物品处置对比 →','See item recovery comparison →');
+
+  set('#t4h','循环物品处置对比','Circular item recovery comparison');
+  set('#t4p','对深圳侧不再需要的物品，逐条比较净结果。系统严格区分四种性质完全不同的「好处」。',
+            'For items left behind in Shenzhen, each option is compared on net result. The system strictly separates four very different kinds of "benefit".');
+  set('#t4warn','<b>关键修正：</b>「回收」不等于「拿到钱」。渠道可能是现金回收、购买新品的折扣补贴、免费上门清运，也可能是你需要付费的处置。系统按 <span class="mono">净结果 = 转卖/回收价值 + 适用补贴 − 运输费 − 处理费 − 处置费</span> 逐项拆解。',
+               '<b>Key correction:</b> recycling does not mean getting paid. A channel may be cash recovery, a discount on a new purchase, free removal — or a fee you pay. The system breaks down <span class="mono">net = recovery value + applicable subsidy − transport − handling − disposal fee</span> line by line.');
+  set('#t4gate','条件性渠道：是否打算购买新家电？','Conditional channel: are you buying a new appliance?');
+  set('#t4gates','以旧换新是「买新机时的折扣」，不是回收款。在你明确表示要购新之前，它不参与推荐排序 —— 这样系统才不会把补贴冒充成回收收入。',
+               'Trade-in is a discount on a NEW purchase, not a recycling payment. It stays out of the ranking until you say you are buying new — so the system never passes a subsidy off as recovery income.');
+  set('#t4gateL','我计划在深圳购买新家电（激活以旧换新补贴渠道）','I plan to buy a new appliance in Shenzhen (activates the trade-in channel)');
+  set('#t4gateH','试着勾选再取消，观察旧冰箱与旧洗衣机的推荐如何变化。','Tick and untick it to watch the recommendation for the fridge and washing machine change.');
+  set('#t4leg','收益性质图例','What each benefit actually means');
+}
+
+/* ---------- navigation ---------- */
+function go(n){
+  S.screen = n;
+  $$('.screen').forEach(s=>s.classList.remove('on'));
+  $('#s'+n).classList.add('on');
+  renderSteps();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function renderAll(){
+  renderSteps(); renderS1(); fillSelects(); renderInventory(); renderAIBox(); renderPlan(); renderRecovery(); applyText();
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-go],[data-estate],[data-open],[data-close],[data-edit],[data-fix]');
+  if(!t) return;
+  if(t.dataset.go){ go(+t.dataset.go); return; }
+  if(t.dataset.estate){ S.estate=t.dataset.estate; renderEstates(); renderS1(); renderPlan(); return; }
+  if(t.dataset.open){ openTrace(t.dataset.open); return; }
+  if(t.dataset.close){ $('#mask').classList.remove('on'); return; }
+  if(t.dataset.edit){ editItem(t.dataset.edit); return; }
+  if(t.dataset.fix){
+    const m = AI_MOCK[+t.dataset.fix];
+    const it = S.items.find(x=>x.id===m.patch.id);
+    if(it){ Object.assign(it, m.patch); it.zh=m.patch.name.zh; it.en=m.patch.name.en; it.aiTouched=true; it.aiCorrected=true; }
+    m.wrong=false; m.conf=.98;
+    renderAIBox(); renderInventory(); renderPlan(); renderRecovery();
+    return;
+  }
+});
+$('#mask').addEventListener('click', e=>{ if(e.target.id==='mask') $('#mask').classList.remove('on'); });
+
+$('#langBtn').addEventListener('click', ()=>{ LANG = LANG==='zh'?'en':'zh'; renderAll(); });
+$('#assistBtn').addEventListener('click', ()=>{
+  S.assist = !S.assist; document.body.classList.toggle('assist', S.assist); applyText();
+});
+$('#printBtn').addEventListener('click', ()=>{
+  const was = S.screen;
+  go(3); $$('.screen').forEach(s=>s.classList.remove('printon')); $('#s3').classList.add('printon');
+  setTimeout(()=>{ window.print(); }, 120);
+});
+
+$('#aiBtn').addEventListener('click', ()=>{ $('#aibox').style.display='block'; S.aiUsed=true; renderAIBox(); });
+$('#aiClose').addEventListener('click', ()=>{ $('#aibox').style.display='none'; });
+$('#aiAccept').addEventListener('click', ()=>{
+  AI_MOCK.forEach(m=>{ if(!m.wrong && m.patch){ const it=S.items.find(x=>x.id===m.patch.id); if(it) it.aiTouched=true; } });
+  $('#aibox').style.display='none'; renderInventory(); renderPlan(); renderRecovery();
+  go(3);
+});
+$('#resetBtn').addEventListener('click', ()=>{ S.items = CATALOG.map(o=>({...o})); S.unwanted = UNWANTED.map(o=>({...o})); renderInventory(); renderPlan(); renderRecovery(); });
+$('#addBtn').addEventListener('click', ()=>{
+  const z = LANG==='zh';
+  const nm = prompt(z?'物品名称（中文）':'Item name'); if(!nm) return;
+  const vol = parseFloat(prompt(z?'体积（m³，例如 0.3）':'Volume in m³ (e.g. 0.3)','0.2')) || .2;
+  const wt  = parseFloat(prompt(z?'重量（kg）':'Weight in kg','10')) || 10;
+  const rp  = parseFloat(prompt(z?'香港重置价（HKD，无可替代请留空）':'HK replacement cost (HKD, blank if irreplaceable)','800')) || 800;
+  S.items.push({id:'x'+Date.now(), zh:nm, en:nm, cat:'furniture', vol:vol, wt:wt, urgency:'medium', repl:rp, cond:'good'});
+  renderInventory(); renderPlan();
+});
+$('#buyNewChk').addEventListener('change', e=>{ S.buyNew=e.target.checked; renderRecovery(); });
+$('#movein').addEventListener('change', e=>{ S.movein=e.target.value; renderPlan(); });
+$('#household').addEventListener('change', e=>{ S.household=e.target.value; });
+$('#origin').addEventListener('change', e=>{ S.origin=e.target.value; });
+$('#ntrips').addEventListener('change', e=>{ S.ntrips=+e.target.value; });
+
+function editItem(id){
+  const it = allItems().find(x=>x.id===id); if(!it) return;
+  const z = LANG==='zh';
+  const conds = z?['良好','尚可','较差','已损坏','可用']:['Good','Fair','Poor','Broken','Working'];
+  const cmap = z?{良好:'good',尚可:'fair',较差:'poor',已损坏:'broken',可用:'working'}:{Good:'good',Fair:'fair',Poor:'poor',Broken:'broken',Working:'working'};
+  const c = prompt((z?'状况（'+conds.join(' / ')+'）：':'Condition ('+conds.join(' / ')+'):'), z?'良好':'Good');
+  if(c && cmap[c]) it.cond = cmap[c];
+  const v = parseFloat(prompt(z?'体积（m³）：':'Volume (m³):', it.vol)); if(!isNaN(v)) it.vol=v;
+  const w = parseFloat(prompt(z?'重量（kg）：':'Weight (kg):', it.wt)); if(!isNaN(w)) it.wt=w;
+  if(it.appliance){
+    const p = confirm(z?'该电器插头是否符合香港英标要求？（确定=符合，取消=不符合）':'Is the plug compliant with HK requirements? (OK = yes, Cancel = no)');
+    it.plugOk = p;
+  }
+  renderInventory(); renderPlan(); renderRecovery();
+}
+
+/* ---------- boot ---------- */
+renderAll();
+</script>
+</body>
+</html>
