@@ -56,7 +56,7 @@ GitHub Pages 前端
 
 ## 3. 改造当前前端适配器
 
-主要修改 `loopmove-scan.html` 和 `loopmove-scan-logic.js`：
+主要修改 `features/scan/index.html` 和 `features/scan/scan-logic.js`：
 
 - 将原始 `File` 独立保存在以 photoId 为键的映射中，避免标准化和 session 克隆后丢失文件。
 - 追加照片只提交新文件，不把本地 `blob:` URL 发给后端，也不重新覆盖已核对的旧结果。

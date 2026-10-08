@@ -1,8 +1,9 @@
 /* Illustrated sample only: never used as a fallback for uploaded photos. */
 (function(root){
   'use strict';
-  root.createLoopMoveExample=function(L){
-    var photo={id:'example-room',order:0,fileName:'小小卧室 · 示例',src:'./assets/example-room.png',width:1448,height:1086};
+  root.createLoopMoveExample=function(L,options){
+    options=options || {};
+    var photo={id:'example-room',order:0,fileName:'小小卧室 · 示例',src:options.imageSrc || './assets/images/example-room.png',width:1448,height:1086};
     var items=[
       ['bed','床架','sleep',{x:0,y:.21,w:.41,h:.53}],
       ['desk','书桌','work',{x:.595,y:.28,w:.32,h:.33}],

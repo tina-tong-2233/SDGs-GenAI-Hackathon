@@ -2,15 +2,15 @@
 
 ## 1. 目录与运行
 
-- `loopmove-scan.html` 是当前推荐运行入口。
-- `loopmove-scan-logic.js` 必须与扫描页面放在同一个目录。
-- Demo 必须通过本地 HTTP 服务器运行，不把 `file://` 直接打开当成标准测试方式。
+- `index.html` 是完整用户旅程入口；`features/scan/index.html` 是独立扫描入口。
+- `features/scan/scan-logic.js` 必须与扫描页面放在同一个目录。
+- 页面必须通过本地 HTTP 服务器运行，不把 `file://` 直接打开当成标准测试方式。
 - 不修改、删除或移动项目的 `.codebuddy` 数据目录。
 - 新增资源必须使用相对路径，并在本地 HTTP 服务器下验证。
 
 ## 2. 逻辑和界面分离
 
-### `loopmove-scan.html` 负责
+### `features/scan/index.html` 负责
 
 - 页面结构；
 - CSS 和视觉设计；
@@ -20,7 +20,7 @@
 - 用户交互；
 - Toast、sheet、主题切换。
 
-### `loopmove-scan-logic.js` 负责
+### `features/scan/scan-logic.js` 负责
 
 - 识别结果标准化；
 - 照片、观察结果和实体数据；
@@ -223,7 +223,7 @@ photo → observation → entity
 ### 语法检查
 
 ```bash
-node -e "const fs=require('fs');const h=fs.readFileSync('loopmove-scan.html','utf8');const j=[...h.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].pop()[1];new Function(j);new Function(fs.readFileSync('loopmove-scan-logic.js','utf8'));console.log('ok')"
+node -e "const fs=require('fs');const h=fs.readFileSync('features/scan/index.html','utf8');const j=[...h.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)].pop()[1];new Function(j);new Function(fs.readFileSync('features/scan/scan-logic.js','utf8'));console.log('ok')"
 ```
 
 ### 启动测试
@@ -235,7 +235,7 @@ python3 -m http.server 8000 --directory .
 然后访问：
 
 ```text
-http://localhost:8000/loopmove-scan.html
+http://localhost:8000/features/scan/index.html
 ```
 
 ### 逻辑测试

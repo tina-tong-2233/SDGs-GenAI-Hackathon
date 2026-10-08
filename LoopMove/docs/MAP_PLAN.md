@@ -1,6 +1,6 @@
 # Map 实现与后续目标
 
-## 北都生活配套（新增主视图）
+## 北都生活配套（主视图）
 
 - 默认进入“北都生活配套”，与搬家服务网站卡片分开切换。
 - 已收录 12 项有官方来源的设施／规划记录，覆盖古洞北、粉岭北／上水、新田／牛潭尾和洪水桥／厦村。
@@ -11,13 +11,13 @@
 - 本轮为部分资料收录，空结果不表示当地没有设施。教育类目前收录大学城，不代表完整学校清单或学区资格。
 - 关注配套保存至 `localStorage.loopmove_map_facility`；搬家服务卡片直接打开外部网站。
 
-资料来源链接见 `loopmove-map-data.js` 中的 `sources`，亦可从每条详情直接访问。
+资料来源链接见 `features/explore/explore-data.js` 中的 `sources`，亦可从每条详情直接访问。
 
 验收：默认显示 12 项；切至现有显示 2 项；新田片区＋现有显示“暂无收录”；新田片区＋展望＋医疗显示综合医教研医院；切回搬家服务显示六个网站入口；返回配套后可恢复保存的关注项。
 
 ## 搬家服务网站卡片
 
-入口为 `loopmove-map.html`，扫描首页提供“生活配套与搬家服务”链接。
+入口为 `features/explore/index.html`，扫描首页提供“生活配套与搬家服务”链接。
 
 - 用六张网站卡片替代旧版虚构服务点，移除服务地图、定位、坐标及“下一站”保存功能。
 - 回收处理、物资捐赠、二手转卖、搬运服务四类，支持关键词组合筛选与空结果重置。
@@ -36,10 +36,10 @@
 
 ## 文件分工
 
-- `loopmove-map.html`：配套示意图、网站卡片容器与导航。
-- `loopmove-map.css`：响应式布局、主题、卡片样式。
-- `loopmove-map-data.js`：官方配套记录、服务链接、分类和搜索过滤。
-- `loopmove-map.js`：视图切换、筛选、卡片与配套详情渲染、配套保存。
+- `features/explore/index.html`：配套示意图、网站卡片容器与导航。
+- `features/explore/explore.css`：响应式布局、主题、卡片样式。
+- `features/explore/explore-data.js`：官方配套记录、服务链接、分类和搜索过滤。
+- `features/explore/explore.js`：视图切换、筛选、卡片与配套详情渲染、配套保存。
 
 ## Future goal：Google Maps（未开发）
 
@@ -63,7 +63,7 @@
 
 ## 本地检查
 
-运行 `bash start-demo.sh`，打开 `http://localhost:8000/loopmove-map.html`。
+运行 `bash scripts/start.sh`，打开 `http://localhost:8000/features/explore/index.html`。
 
 搬家服务视图手动验收：显示六张卡片；筛选“捐赠”只显示救世军；搜索“深圳”显示处理指引；搜索无匹配词显示空状态并能重置；点击每张卡片打开对应网站；切回北都配套仍支持现有／展望、片区筛选和保存。检查手机、桌面、深浅色及键盘访问。
 

@@ -341,7 +341,7 @@ body.assist .net{font-size:23px}
     </div>
     <div class="card" id="aibox" style="display:none">
       <h3 id="t2ai">AI 识别结果（模拟）</h3>
-      <div class="sub" id="t2ais">本 demo 使用预置结果，不调用真实视觉模型。注意下面第一个条目 —— 识别是错的，你可以纠正它。</div>
+      <div class="sub" id="t2ais">本版本 使用预置结果，不调用真实视觉模型。注意下面第一个条目 —— 识别是错的，你可以纠正它。</div>
       <div id="airesults"></div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn primary sm" id="aiAccept">采纳并重新计算整份计划</button>
@@ -416,7 +416,7 @@ body.assist .net{font-size:23px}
 
 <script>
 /* =====================================================================
-   LoopMove demo — single file
+   LoopMove sample — single file
    Layer 1: curated data (every service record carries source + last_verified)
    Layer 2: rule engine (returns decision_trace, never a bare answer)
    Layer 3: UI (4 screens + print + property-management assisted mode)
@@ -603,7 +603,7 @@ const L  = o => {
 };
 const T_ = new Proxy({}, { get:(_,k)=>L(T[k]) });
 const HKD = n => 'HK$' + Math.round(n).toLocaleString('en-US');
-const RATE = {base:60, vol:900, wt:3};   // 跨境搬运分摊模型（demo 参数）
+const RATE = {base:60, vol:900, wt:3};   // 跨境搬运分摊模型（示例参数）
 const CONDF = {good:1, fair:.7, poor:.35, broken:.05, working:.85};
 
 /* ====================== LAYER 2: RULE ENGINE ====================== */
@@ -789,7 +789,7 @@ function buildOffers(it){
 
   // 4. 家电以旧换新补贴 —— 购买补贴，不是回收款；未声明购新则不参与排序
   if(it.appliance){
-    const sub = Math.round(1500 * 1.09);   // RMB 1500 上限折算 HKD（demo 汇率）
+    const sub = Math.round(1500 * 1.09);   // RMB 1500 上限折算 HKD（示例汇率）
     O.push({id:'tradein', name:{zh:'深圳家电以旧换新补贴',en:'Shenzhen appliance trade-in subsidy'}, side:'sz',
       ben:'subsidy', prio:2, feas:'cond', locked: !S.buyNew,
       v:{value:0, subsidy:sub, transport:0, handling:0, disposal:0},
@@ -1008,8 +1008,8 @@ function renderPlan(){
     (LANG==='zh'?'生成日期':'Generated')+': '+new Date().toISOString().slice(0,10)+' · '+
     (LANG==='zh'?'本计划为决策支持，不构成清关或法律意见':'Decision support only; not customs or legal advice');
   $('#pfoot').innerHTML = (LANG==='zh'
-    ? '运输成本为 demo 估算参数（基础 HK$'+RATE.base+' + HK$'+RATE.vol+'/m³ + HK$'+RATE.wt+'/kg），正式版本须以实际报价替换。所有设施状态标注最后核查日期，计划中设施不得视为现已可用。'
-    : 'Transport costs are demo parameters (base HK$'+RATE.base+' + HK$'+RATE.vol+'/m³ + HK$'+RATE.wt+'/kg). Planned facilities must not be treated as available.');
+    ? '运输成本为 sample 估算参数（基础 HK$'+RATE.base+' + HK$'+RATE.vol+'/m³ + HK$'+RATE.wt+'/kg），正式版本须以实际报价替换。所有设施状态标注最后核查日期，计划中设施不得视为现已可用。'
+    : 'Transport costs are sample parameters (base HK$'+RATE.base+' + HK$'+RATE.vol+'/m³ + HK$'+RATE.wt+'/kg). Planned facilities must not be treated as available.');
 }
 
 /* ---------- screen 4 ---------- */
@@ -1133,8 +1133,8 @@ function applyText(){
   set('#t2hint','点击任意行的「编辑」可修改状况、体积重量与电器参数。修改后整份计划会重新计算。',
                'Use "Edit" on any row to change condition, volume, weight or electrical attributes. The whole plan is recalculated.');
   set('#t2ai','AI 识别结果（模拟）','AI recognition results (simulated)');
-  set('#t2ais','本 demo 使用预置结果，不调用真实视觉模型。注意下面第一个条目 —— 识别是错的，你可以纠正它。',
-               'This demo uses preset results and calls no real vision model. Note the first entry — the recognition is wrong, and you can correct it.');
+  set('#t2ais','本版本 使用预置结果，不调用真实视觉模型。注意下面第一个条目 —— 识别是错的，你可以纠正它。',
+               'This sample uses preset results and calls no real vision model. Note the first entry — the recognition is wrong, and you can correct it.');
   set('#aiAccept','采纳并重新计算整份计划','Accept & recalculate the whole plan');
   set('#aiClose','关闭','Close');
   set('#t2next','生成分阶段计划 →','Generate phased plan →');
