@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d756b">
+<title>LoopMove · 搬家地图</title>
+<link rel="stylesheet" href="./loopmove-map.css">
+<script src="./loopmove-map-data.js" defer></script>
+<script src="./loopmove-map.js" defer></script>
+</head>
+<body>
+<svg class="icons" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><symbol id="pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol><symbol id="arrow" viewBox="0 0 24 24"><path d="m12 5-7 7 7 7M5 12h15"/></symbol><symbol id="locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/></symbol><symbol id="moon" viewBox="0 0 24 24"><path d="M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11Z"/></symbol></svg>
+<div class="shell">
+<header class="topbar"><a class="back" href="./loopmove-scan.html"><svg class="icon"><use href="#arrow"/></svg>房间扫描</a><span class="wordmark">LoopMove<span class="dot">●</span></span><button id="theme" class="icon-button" aria-label="切换深浅色" aria-pressed="false"><svg class="icon"><use href="#moon"/></svg></button></header>
+<main>
+<div class="intro"><div><p class="eyebrow">MOVE LESS. LIVE MORE.</p><h1>搬过去，生活会是什么样？</h1><p class="subtitle">先看北部都会区建成后的生活配套，再安排搬家的下一站。</p></div><span class="demo-badge" id="mode-badge">北都配套展望</span></div>
+<div class="mode-tabs" role="group" aria-label="地图内容"><button data-mode="facilities" aria-pressed="true">北都生活配套</button><button data-mode="moving" aria-pressed="false">搬家服务点</button></div>
+<section id="facility-controls" class="facility-controls" aria-label="配套筛选">
+<label>准备住在哪个片区？<select id="district" aria-label="居住片区"></select></label>
+<div class="view-tabs" role="group" aria-label="配套时间视角"><button data-view="current" aria-pressed="false">现有设施</button><button data-view="future" aria-pressed="true">建成后展望</button></div>
+<p id="perspective-note">展望叠加现有、建设中及规划设施；各项目分期落成，不代表同年开放。</p>
+<div id="facility-summary" class="facility-summary" role="status"></div>
+</section>
+<div class="toolbar"><label class="search"><svg class="icon"><use href="#pin"/></svg><input id="search" type="search" placeholder="搜索片区、设施或物品" aria-label="搜索片区、设施或物品" autocomplete="off"></label><div id="filters" class="filters" role="group" aria-label="地点类型"></div></div>
+<div class="workspace">
+<section class="map-panel" aria-label="深圳至香港地点示意图">
+<div class="map-heading"><span id="map-title">北部都会区 · 生活配套</span><span id="map-subtitle">片区关系示意 · 非精确选址</span></div>
+<div id="facility-map" class="facility-map" aria-label="北都片区配套示意"></div>
+<div class="map" id="map" hidden>
+<svg class="terrain" viewBox="0 0 800 540" preserveAspectRatio="none" aria-hidden="true">
+<defs><pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" class="grid"/></pattern></defs>
+<rect width="800" height="540" class="land"/><rect width="800" height="540" fill="url(#grid)"/>
+<path d="M0 240Q100 190 170 270T370 285T580 240T800 220V340Q680 310 575 338T380 355T170 348T0 335Z" class="water"/>
+<path d="M50 435Q150 395 220 460T380 465L350 540H0V490Z M610 360Q760 300 800 390V540H690Q730 450 610 360Z M420 40Q540 90 650 30L720 120Q550 175 450 115Z" class="park"/>
+<g class="roads"><path d="M0 125Q230 210 800 100M0 420Q240 370 450 400T800 450M160 0Q250 120 330 200M550 360Q540 440 530 540"/></g>
+</svg>
+<span class="region shenzhen">深圳 <small>SHENZHEN</small></span><span class="region hongkong">香港北部 <small>NORTHERN HONG KONG</small></span><span class="water-label">深 港 区 域 示 意</span><span class="north">↑ N</span>
+<div id="markers"></div><div id="user-position" class="user-position" hidden aria-label="当前位置"></div>
+</div>
+<div class="map-actions"><button id="locate-button"><svg class="icon"><use href="#locate"/></svg>我的位置</button><button id="reset">重置视图</button></div>
+<p class="map-note" id="map-note">按片区归类，不代表步行距离、服务覆盖或已确认选址。已收录部分配套，非完整清单。</p>
+<p id="location-status" class="location-status" role="status"></p>
+</section>
+<aside class="places-panel" aria-label="地点列表和详情"><div class="list-heading"><h2 id="list-title">片区配套</h2><span id="count" role="status">正在加载…</span></div><div id="places"></div><section id="detail" class="detail" aria-label="地点详情" tabindex="-1"><p class="eyebrow">下一站，由你决定</p><h2>选一个地点看看</h2><p>点击地图标记或列表，查看适合整理的物品，并保存你的选择。</p></section><p id="save-status" role="status"></p></aside>
+</div>
+<footer><span>每一次整理，都是更轻盈的开始。</span><span>Google Maps 接入 · 后续计划</span></footer>
+<noscript><p>请启用 JavaScript 以查看和筛选配套资料。</p></noscript>
+</main></div>
+</body></html>

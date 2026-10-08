@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d9488">
+<title>LoopMove · 分阶段搬迁助手</title>
+<style>
+:root{
+  --bg:#f4f5f7; --card:#fff; --ink:#12181c; --muted:#6b7a85; --line:#e6eaee;
+  --brand:#0d9488; --brand-d:#0f766e; --brand-l:#e6f5f3;
+  --warn:#c2740a; --warn-l:#fdf3e2; --bad:#c2342c; --bad-l:#fdeceb; --ok:#1f8a4c; --ok-l:#e8f6ed;
+  --r:16px; --sh:0 1px 2px rgba(16,24,32,.06),0 6px 18px rgba(16,24,32,.06);
+  --tab-h:58px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:#20262b;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  color:var(--ink);font-size:15px;line-height:1.5;
+  display:flex;align-items:center;justify-content:center;min-height:100%;
+  overflow:hidden;
+}
+body.assist{font-size:17px}
+button{font-family:inherit;font-size:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select{font-family:inherit;font-size:inherit;color:inherit}
+
+/* ---------- phone shell ---------- */
+.phone{
+  position:relative;width:390px;height:844px;flex:0 0 auto;
+  background:var(--bg);border-radius:46px;overflow:hidden;
+  box-shadow:0 0 0 11px #14181b,0 0 0 13px #2c3339,0 30px 70px rgba(0,0,0,.55);
+  display:flex;flex-direction:column;
+}
+.statusbar{
+  height:44px;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;
+  padding:0 26px;font-size:13px;font-weight:600;letter-spacing:.3px;color:var(--ink);
+  background:transparent;position:relative;z-index:30;pointer-events:none;
+}
+.statusbar .sig{display:flex;align-items:center;gap:5px;font-size:11px}
+.notch{
+  position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  width:112px;height:26px;background:#14181b;border-radius:14px;z-index:31;pointer-events:none;
+}
+.vp{flex:1;min-height:0;display:flex;flex-direction:column;position:relative}
+.homebar{height:22px;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+.homebar i{display:block;width:134px;height:5px;border-radius:3px;background:#14181b;opacity:.85}
+
+/* ---------- app header ---------- */
+.hd{
+  flex:0 0 auto;padding:2px 16px 10px;background:var(--bg);
+  border-bottom:1px solid transparent;transition:border-color .2s;
+}
+.hd.stuck{border-bottom-color:var(--line);background:rgba(244,245,247,.94);backdrop-filter:blur(10px)}
+.hd-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hd h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.3px}
+.hd .sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+.iconbtn{
+  width:34px;height:34px;border-radius:11px;background:#fff;display:flex;align-items:center;
+  justify-content:center;font-size:15px;box-shadow:var(--sh);flex:0 0 auto;
+}
+
+/* ---------- pages ---------- */
+main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding:12px 14px 24px;scroll-behavior:smooth}
+main::-webkit-scrollbar{width:0}
+.page{display:none;animation:pageIn .28s cubic-bezier(.22,.7,.3,1)}
+.page.on{display:block}
+@keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.tabbar{
+  flex:0 0 auto;height:var(--tab-h);display:flex;background:rgba(255,255,255,.96);
+  backdrop-filter:blur(14px);border-top:1px solid var(--line);padding-bottom:2px;
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  color:#93a1ab;font-size:10.5px;font-weight:600;position:relative;transition:color .18s;
+}
+.tab .ic{font-size:19px;line-height:1;transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
+.tab.on{color:var(--brand)}
+.tab.on .ic{transform:translateY(-2px) scale(1.12)}
+.tab .dot{
+  position:absolute;top:6px;right:calc(50% - 18px);min-width:15px;height:15px;border-radius:8px;
+  background:var(--bad);color:#fff;font-size:9.5px;line-height:15px;font-weight:700;padding:0 3px;text-align:center;
+}
+
+/* ---------- generic ---------- */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px;margin-bottom:12px}
+.card.tight{padding:12px}
+.sec-t{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.6px;margin:18px 2px 8px;text-transform:uppercase}
+.sec-t:first-child{margin-top:2px}
+.row{display:flex;align-items:center;gap:10px}
+.between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.muted{color:var(--muted);font-size:12.5px}
+.mono{font-variant-numeric:tabular-nums}
+.pill{
+  display:inline-flex;align-items:center;gap:4px;padding:2.5px 8px;border-radius:20px;
+  font-size:11px;font-weight:700;background:#eef1f4;color:#55636e;white-space:nowrap;
+}
+.pill.b{background:var(--brand-l);color:var(--brand-d)}
+.pill.w{background:var(--warn-l);color:var(--warn)}
+.pill.r{background:var(--bad-l);color:var(--bad)}
+.pill.g{background:var(--ok-l);color:var(--ok)}
+.pill.line{background:#fff;border:1px solid var(--line);color:var(--muted)}
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:13px;
+  border-radius:14px;background:var(--brand);color:#fff;font-weight:700;font-size:15px;
+  transition:transform .12s,opacity .18s;box-shadow:0 4px 14px rgba(13,148,136,.28);
+}
+.btn:active{transform:scale(.975);opacity:.92}
+.btn.ghost{background:#fff;color:var(--ink);box-shadow:var(--sh)}
+.btn.line{background:transparent;color:var(--brand-d);box-shadow:none;border:1.5px solid var(--brand);}
+.btn.sm{padding:9px;font-size:13.5px;border-radius:11px}
+.btn:disabled{opacity:.45}
+.spacer{height:8px}
+
+/* ---------- onboarding ---------- */
+.ob{
+  position:absolute;inset:0;background:var(--bg);z-index:40;display:flex;flex-direction:column;
+}
+.ob.hide{display:none}
+.ob-top{flex:0 0 auto;padding:8px 18px 0;display:flex;align-items:center;gap:10px}
+.ob-dots{display:flex;gap:5px;flex:1}
+.ob-dots i{width:6px;height:6px;border-radius:3px;background:#cfd6dc;transition:all .3s}
+.ob-dots i.on{width:20px;background:var(--brand)}
+.ob-body{flex:1;min-height:0;overflow-y:auto;padding:6px 20px 10px}
+.ob-foot{flex:0 0 auto;padding:10px 18px 16px;display:flex;gap:10px}
+.ob-k{font-size:12px;font-weight:800;color:var(--brand);letter-spacing:1px;margin-bottom:6px}
+.ob-q{font-size:24px;font-weight:800;line-height:1.32;letter-spacing:-.4px;margin:0 0 6px}
+.ob-h{font-size:13.5px;color:var(--muted);margin-bottom:14px}
+.opt{
+  display:flex;align-items:center;gap:12px;padding:13px;border-radius:14px;background:#fff;
+  box-shadow:var(--sh);margin-bottom:9px;border:2px solid transparent;transition:.16s;
+}
+.opt:active{transform:scale(.985)}
+.opt.on{border-color:var(--brand);background:var(--brand-l)}
+.opt .oi{font-size:22px;width:30px;text-align:center;flex:0 0 auto}
+.opt .ot{flex:1;min-width:0}
+.opt .ot b{display:block;font-size:15px;font-weight:700}
+.opt .ot span{display:block;font-size:12px;color:var(--muted);margin-top:1px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  padding:9px 14px;border-radius:12px;background:#fff;box-shadow:var(--sh);font-size:14px;font-weight:600;
+  border:2px solid transparent;transition:.16s;
+}
+.chip.on{border-color:var(--brand);background:var(--brand-l);color:var(--brand-d)}
+.mini{margin-top:9px;display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--muted)}
+.mini .bar{flex:1;height:4px;border-radius:2px;background:#e9edf0;overflow:hidden}
+.mini .bar i{display:block;height:100%;border-radius:2px;background:var(--brand)}
+.ob-gen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:0 30px}
+.spin{width:46px;height:46px;border-radius:50%;border:3px solid #dfe5ea;border-top-color:var(--brand);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ob-gen p{font-size:14px;color:var(--muted);margin:0}
+
+/* ---------- plan: summary ---------- */
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sumc{background:#fff;border-radius:14px;padding:11px 12px;box-shadow:var(--sh)}
+.sumc b{display:block;font-size:20px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.sumc span{font-size:11px;color:var(--muted);display:block;margin-top:1px}
+
+/* ---------- plan: buckets ---------- */
+.bk{
+  background:#fff;border-radius:var(--r);box-shadow:var(--sh);margin-bottom:12px;overflow:hidden;
+  transition:box-shadow .18s,transform .18s;border:2px solid transparent;
+}
+.bk.hot{border-color:var(--brand);transform:scale(1.012);box-shadow:0 0 0 4px var(--brand-l),var(--sh)}
+.bk-h{padding:12px 13px 10px;display:flex;align-items:center;gap:10px;background:linear-gradient(180deg,#fbfcfd,#fff)}
+.bk-h .bn{font-size:15px;font-weight:800;letter-spacing:-.2px}
+.bk-h .bw{font-size:11px;color:var(--muted);margin-top:1px}
+.bk-h .cnt{
+  margin-left:auto;font-size:12px;font-weight:800;color:var(--brand-d);background:var(--brand-l);
+  padding:3px 9px;border-radius:20px;font-variant-numeric:tabular-nums;
+}
+.bk-b{padding:4px 8px 10px;min-height:52px}
+.bk.empty .bk-b{
+  border:1.5px dashed #d8dee4;border-radius:12px;margin:0 8px 10px;display:flex;align-items:center;
+  justify-content:center;color:#9fabb5;font-size:12px;min-height:52px;
+}
+.icard{
+  display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:12px;background:#fff;
+  transition:background .15s;position:relative;margin-bottom:2px;
+}
+.icard+.icard{border-top:1px solid #f1f4f6}
+.icard .nm{flex:1;min-width:0;font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.icard .nm small{display:block;font-size:10.5px;color:var(--muted);font-weight:500;margin-top:1px}
+.icard .cost{font-size:12px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.icard.ghosted{opacity:.35}
+.icard.lift{opacity:0}
+.grip{
+  flex:0 0 auto;width:26px;height:34px;display:flex;align-items:center;justify-content:center;
+  color:#c2ccd3;font-size:15px;touch-action:none;cursor:grab;letter-spacing:-2px;
+}
+.grip:active{cursor:grabbing}
+.ovr{position:absolute;top:6px;right:4px;font-size:9px;font-weight:800;color:var(--warn);background:var(--warn-l);padding:1px 5px;border-radius:6px}
+#fly{
+  position:fixed;z-index:99;pointer-events:none;background:#fff;border-radius:14px;
+  box-shadow:0 16px 40px rgba(16,24,32,.28);padding:11px 13px;display:none;align-items:center;gap:10px;
+  min-width:210px;
+}
+#fly.on{display:flex}
+#fly .nm{font-size:14px;font-weight:700}
+
+/* ---------- items page ---------- */
+.filters{display:flex;gap:7px;overflow-x:auto;padding:2px 0 10px;margin:0 -14px;padding-left:14px}
+.filters::-webkit-scrollbar{height:0}
+.fchip{padding:7px 12px;border-radius:20px;background:#fff;font-size:12.5px;font-weight:600;box-shadow:var(--sh);white-space:nowrap;flex:0 0 auto;border:1.5px solid transparent}
+.fchip.on{background:var(--brand);color:#fff}
+.irow{display:flex;align-items:center;gap:11px;padding:11px 12px;background:#fff;border-radius:14px;box-shadow:var(--sh);margin-bottom:8px;animation:stagger .32s backwards}
+@keyframes stagger{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.irow .av{width:38px;height:38px;border-radius:11px;background:var(--brand-l);display:flex;align-items:center;justify-content:center;font-size:19px;flex:0 0 auto}
+.irow .tt{flex:1;min-width:0}
+.irow .tt b{display:block;font-size:14px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.irow .tt span{font-size:11.5px;color:var(--muted)}
+.irow .ar{color:#c2ccd3;font-size:16px;flex:0 0 auto}
+.aibox{background:linear-gradient(135deg,#0f766e,#14b8a6);border-radius:var(--r);padding:14px;color:#fff;box-shadow:0 8px 22px rgba(13,148,136,.3)}
+.aibox h4{margin:0 0 3px;font-size:14.5px;font-weight:800}
+.aibox .am{font-size:11.5px;opacity:.86;margin-bottom:11px}
+.aibox .btn{background:#fff;color:var(--brand-d);box-shadow:none}
+
+/* ---------- recover: swipe deck ---------- */
+.deck{position:relative;height:446px;margin:4px 0 6px}
+.rc{
+  position:absolute;inset:0;background:#fff;border-radius:20px;box-shadow:0 8px 26px rgba(16,24,32,.14);
+  padding:13px 14px;display:flex;flex-direction:column;will-change:transform;transition:transform .26s cubic-bezier(.22,.7,.3,1),opacity .26s;
+  overflow:hidden;
+}
+.rc.b1{transform:translateY(12px) scale(.955);opacity:.75;z-index:1}
+.rc.b2{transform:translateY(22px) scale(.915);opacity:.5;z-index:0}
+.rc.top{z-index:3;cursor:grab}
+.rc .rh{display:flex;align-items:flex-start;gap:10px}
+.rc .rh .rav{width:46px;height:46px;border-radius:14px;background:#f1f4f6;display:flex;align-items:center;justify-content:center;font-size:24px;flex:0 0 auto}
+.rc .rh b{font-size:17px;font-weight:800;letter-spacing:-.3px;line-height:1.25}
+.rc .rh .cond{margin-top:5px}
+.rc .net{
+  margin:10px 0 8px;padding:11px 13px;border-radius:14px;background:#f7f9fa;text-align:center;
+}
+.rc .net .lb{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.4px}
+.rc .net .vv{font-size:30px;font-weight:800;letter-spacing:-1.2px;font-variant-numeric:tabular-nums;margin-top:1px}
+.rc .net .vv.pos{color:var(--ok)} .rc .net .vv.neg{color:var(--bad)} .rc .net .vv.zero{color:var(--muted)}
+.rc .ch{padding:11px 12px;border-radius:14px;background:var(--brand-l);border:1.5px solid #c9e9e4}
+.rc .ch .cn{font-size:14px;font-weight:800;color:var(--brand-d);margin-bottom:3px}
+.rc .ch .cd{font-size:11.5px;color:#3a5b58;line-height:1.45}
+.rc .brk{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.rc .brk .l{display:flex;justify-content:space-between;font-size:11.5px;font-variant-numeric:tabular-nums;line-height:1.45}
+.rc .brk .l b{font-weight:700}
+.rc .brk .l.tot{border-top:1px solid var(--line);padding-top:5px;margin-top:2px;font-weight:800;font-size:12.5px}
+.rc .foot{margin-top:auto;display:flex;gap:9px}
+.rc .swh{text-align:center;font-size:11px;color:#a4aeb6;margin-top:7px;display:flex;align-items:center;justify-content:center;gap:6px}
+.rc .swh i{font-style:normal;font-size:13px}
+.idxbar{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.idxbar .pg{flex:1;height:5px;border-radius:3px;background:#e3e8ec;overflow:hidden}
+.idxbar .pg i{display:block;height:100%;background:var(--brand);border-radius:3px;transition:width .32s cubic-bezier(.22,.7,.3,1)}
+.idxbar .tx{font-size:11.5px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.donebox{text-align:center;padding:26px 16px}
+.donebox .dk{font-size:44px;margin-bottom:8px}
+.donebox h3{margin:0 0 5px;font-size:19px;font-weight:800}
+.donebox p{margin:0;font-size:13px;color:var(--muted)}
+
+/* ---------- sheet ---------- */
+#mask{position:fixed;inset:0;background:rgba(12,20,26,.42);opacity:0;pointer-events:none;transition:opacity .24s;z-index:60}
+#mask.on{opacity:1;pointer-events:auto}
+#sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:61;background:#fff;border-radius:22px 22px 0 0;
+  transform:translateY(102%);transition:transform .32s cubic-bezier(.22,.8,.28,1);
+  max-height:82vh;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.18);
+}
+#sheet.on{transform:none}
+.sh-grip{padding:9px 0 4px;display:flex;justify-content:center;flex:0 0 auto;touch-action:none}
+.sh-grip i{width:38px;height:4.5px;border-radius:3px;background:#d3dae0;display:block}
+.sh-h{flex:0 0 auto;padding:2px 18px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line)}
+.sh-h h3{margin:0;font-size:17px;font-weight:800;flex:1;letter-spacing:-.3px}
+.sh-b{flex:1;min-height:0;overflow-y:auto;padding:14px 18px 20px}
+.sh-b::-webkit-scrollbar{width:0}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:5px;letter-spacing:.3px}
+.fld input,.fld select{
+  width:100%;padding:11px 12px;border-radius:12px;border:1.5px solid var(--line);background:#fbfcfd;
+  font-size:14.5px;font-weight:600;outline:none;transition:border-color .18s;
+}
+.fld input:focus,.fld select:focus{border-color:var(--brand)}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sw{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fbfcfd;border-radius:13px;margin-bottom:9px}
+.sw .sl b{display:block;font-size:14px;font-weight:700}
+.sw .sl span{font-size:11.5px;color:var(--muted)}
+.tg{width:48px;height:28px;border-radius:14px;background:#d5dce2;position:relative;transition:background .22s;flex:0 0 auto}
+.tg i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .22s cubic-bezier(.34,1.4,.64,1);box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tg.on{background:var(--brand)} .tg.on i{transform:translateX(20px)}
+
+/* trace */
+.tr{border-left:2px solid var(--line);padding-left:12px;margin-left:4px}
+.tr .ti{position:relative;padding-bottom:13px}
+.tr .ti:last-child{padding-bottom:0}
+.tr .ti:before{content:'';position:absolute;left:-17px;top:5px;width:8px;height:8px;border-radius:50%;background:#c8d0d7;border:2px solid #fff}
+.tr .ti.hl:before{background:var(--warn)} .tr .ti.bad:before{background:var(--bad)}
+.tr .tl{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.3px}
+.tr .tv{font-size:13.5px;font-weight:700;margin-top:2px}
+.tr .tv.bad{color:var(--bad)} .tr .tv.warn{color:var(--warn)}
+.tr .td{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.tr .tc{
+  margin-top:7px;background:#0f1a1f;color:#b8e6df;padding:10px 11px;border-radius:10px;font-size:11.5px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;line-height:1.6;
+}
+.src{display:block;font-size:11.5px;color:var(--brand-d);text-decoration:none;padding:7px 0;border-top:1px solid var(--line);line-height:1.45}
+.src span{color:var(--muted)}
+
+/* offers list in sheet */
+.of{border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:9px}
+.of.best{border-color:var(--brand);background:var(--brand-l)}
+.of.no{opacity:.62}
+.of .oh{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.of .on{font-size:14px;font-weight:800;line-height:1.3}
+.of .sd{font-size:10.5px;color:var(--muted);margin-top:2px}
+.of .nv{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;flex:0 0 auto}
+.of .nv.pos{color:var(--ok)} .of .nv.neg{color:var(--bad)} .of .nv.zero{color:var(--muted)}
+.of .bd{display:flex;flex-wrap:wrap;gap:5px 10px;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:7px;padding-top:7px;border-top:1px dashed var(--line)}
+.of .bd em{font-style:normal;color:var(--ink);font-weight:700}
+.of .nt{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.5}
+
+/* toast */
+#toast{
+  position:fixed;left:50%;bottom:86px;transform:translate(-50%,20px);z-index:70;
+  background:#12181c;color:#fff;padding:11px 16px;border-radius:14px;font-size:13.5px;font-weight:600;
+  opacity:0;pointer-events:none;transition:.26s cubic-bezier(.22,.8,.28,1);max-width:300px;text-align:center;
+  box-shadow:0 10px 30px rgba(0,0,0,.3);
+}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+/* more page */
+.mrow{display:flex;align-items:center;gap:12px;padding:13px 12px;background:#fff;border-radius:14px;box-shadow:var(--sh);margin-bottom:8px}
+.mrow .mi{width:34px;height:34px;border-radius:10px;background:var(--brand-l);display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 auto}
+.mrow .mt{flex:1;min-width:0}
+.mrow .mt b{display:block;font-size:14px;font-weight:700}
+.mrow .mt span{font-size:11.5px;color:var(--muted)}
+.fac{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--line)}
+.fac:first-child{border-top:0}
+.fac .fn{flex:1;font-size:13px;font-weight:600}
+.fac .fb{width:64px;height:5px;border-radius:3px;background:#e9edf0;overflow:hidden;flex:0 0 auto}
+.fac .fb i{display:block;height:100%;border-radius:3px}
+.note{background:var(--warn-l);border-radius:13px;padding:11px 12px;font-size:12px;color:#7a4d06;line-height:1.55;margin-bottom:10px}
+.note.b{background:var(--brand-l);color:#115e56}
+.note.r{background:var(--bad-l);color:#8a211b}
+
+/* assisted mode */
+body.assist .icard .nm,body.assist .irow .tt b{font-size:16px}
+body.assist .hd h1{font-size:23px}
+#assistbar{
+  display:none;background:var(--brand-d);color:#fff;padding:9px 16px;font-size:12.5px;font-weight:600;
+  align-items:center;gap:8px;flex:0 0 auto;
+}
+body.assist #assistbar{display:flex}
+
+/* print */
+#printarea{display:none}
+@media print{
+  body{background:#fff;display:block;overflow:visible}
+  .phone{box-shadow:none;border-radius:0;width:auto;height:auto}
+  .statusbar,.notch,.homebar,.tabbar,.hd,#toast,#mask,#sheet,.ob,#fly{display:none!important}
+  main{overflow:visible;padding:0}
+  .page{display:none!important}
+  #printarea{display:block!important;padding:0 8mm;font-size:11pt}
+  #printarea h1{font-size:18pt;margin:0 0 2mm}
+  #printarea h2{font-size:12pt;margin:5mm 0 2mm;border-bottom:1px solid #999;padding-bottom:1mm}
+  #printarea table{width:100%;border-collapse:collapse;font-size:10pt}
+  #printarea td,#printarea th{border:1px solid #bbb;padding:1.5mm 2mm;text-align:left}
+  #printarea .pmeta{font-size:9pt;color:#555;margin-bottom:4mm}
+  .card,.bk{box-shadow:none;break-inside:avoid}
+}
+
+@media (max-width:480px), (max-height:860px){
+  body{display:block;overflow:auto;background:var(--bg)}
+  .phone{width:100%;height:100vh;height:100dvh;border-radius:0;box-shadow:none}
+  .notch{display:none}
+  .statusbar{height:max(44px,env(safe-area-inset-top));padding:0 20px}
+  .homebar{height:max(18px,env(safe-area-inset-bottom));background:var(--bg)}
+  .homebar i{display:none}
+  #sheet{bottom:0}
+  #toast{bottom:calc(var(--tab-h) + 26px)}
+}
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="statusbar">
+    <span id="clock">9:41</span>
+    <span class="sig">●●● <span style="opacity:.7">Wi-Fi</span> ▮</span>
+  </div>
+  <div class="notch"></div>
+
+  <div class="vp">
+    <div id="assistbar">🛎 <span id="assisttxt">物管协助模式：由工作人员代居民操作</span></div>
+
+    <!-- ============ ONBOARDING ============ -->
+    <div class="ob" id="ob">
+      <div class="ob-top">
+        <div class="ob-dots" id="obdots"></div>
+        <button class="iconbtn" id="obskip" style="font-size:11.5px;width:auto;padding:0 12px;font-weight:700;color:var(--muted)">跳过</button>
+      </div>
+      <div class="ob-body" id="obbody"></div>
+      <div class="ob-foot" id="obfoot"></div>
+    </div>
+
+    <!-- ============ APP ============ -->
+    <div id="app" style="display:none;flex:1;min-height:0;flex-direction:column">
+      <div class="hd" id="hd">
+        <div class="hd-top">
+          <div style="min-width:0">
+            <h1 id="hTitle">搬迁计划</h1>
+            <div class="sub" id="hSub">古洞北 · 2026-09 入住</div>
+          </div>
+          <div style="display:flex;gap:8px;flex:0 0 auto">
+            <button class="iconbtn" id="btnLang" title="语言">中</button>
+            <button class="iconbtn" id="btnMore" title="更多">⚙</button>
+          </div>
+        </div>
+      </div>
+
+      <main id="main">
+        <!-- ---------- PLAN ---------- -->
+        <section class="page on" id="p-plan">
+          <div class="sum" id="psum"></div>
+          <div class="sec-t" id="lPlanTrips">分趟安排 · 按住 ⋮⋮ 可拖动到其他趟次</div>
+          <div id="buckets"></div>
+          <div class="card" id="szcard">
+            <div class="between">
+              <div>
+                <div style="font-size:15px;font-weight:800" id="lSzList">深圳侧待办</div>
+                <div class="muted" id="szSub">5 件物品待处理</div>
+              </div>
+              <button class="btn sm" style="width:auto;padding:9px 14px" id="btnGoRec">去处理 →</button>
+            </div>
+          </div>
+          <div class="note" id="planNote"></div>
+        </section>
+
+        <!-- ---------- ITEMS ---------- -->
+        <section class="page" id="p-items">
+          <div class="aibox" id="aibox" style="margin-bottom:12px"></div>
+          <div class="filters" id="filters"></div>
+          <div id="ilist"></div>
+        </section>
+
+        <!-- ---------- RECOVER ---------- -->
+        <section class="page" id="p-rec">
+          <div class="idxbar">
+            <div class="pg"><i id="rpg"></i></div>
+            <div class="tx" id="rtx">1 / 5</div>
+          </div>
+          <div class="deck" id="deck"></div>
+          <div class="sec-t" id="lRecLeg">收益性质说明</div>
+          <div class="card tight" id="rleg"></div>
+        </section>
+
+        <!-- ---------- MORE ---------- -->
+        <section class="page" id="p-more">
+          <div class="sec-t" id="lDest">目的地与设施</div>
+          <div class="card" id="mfac"></div>
+          <div class="sec-t" id="lPref">偏好与模式</div>
+          <div id="mpref"></div>
+          <div class="sec-t" id="lBound">系统边界</div>
+          <div class="card" id="mbound"></div>
+          <div class="sec-t" id="lSrc">数据来源</div>
+          <div class="card tight" id="msrc"></div>
+          <div class="spacer"></div>
+          <button class="btn ghost" id="btnPrint">导出 / 打印计划</button>
+          <div class="spacer"></div>
+          <button class="btn ghost" id="btnReOb" style="color:var(--muted)">重新演示引导流程</button>
+          <div class="spacer"></div>
+        </section>
+      </main>
+
+      <nav class="tabbar">
+        <button class="tab on" data-tab="plan"><span class="ic">🧭</span><span class="tl">计划</span></button>
+        <button class="tab" data-tab="items"><span class="ic">📦</span><span class="tl">清单</span></button>
+        <button class="tab" data-tab="rec"><span class="ic">♻️</span><span class="tl">处置</span><span class="dot" id="tdot">5</span></button>
+        <button class="tab" data-tab="more"><span class="ic">⚙</span><span class="tl">更多</span></button>
+      </nav>
+    </div>
+  </div>
+
+  <div class="homebar"><i></i></div>
+</div>
+
+<div id="printarea"></div>
+<div id="fly"></div>
+<div id="mask"></div>
+<div id="sheet">
+  <div class="sh-grip" id="shgrip"><i></i></div>
+  <div class="sh-h"><h3 id="shTitle">详情</h3><button class="iconbtn" id="shClose">✕</button></div>
+  <div class="sh-b" id="shBody"></div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   LoopMove — mobile app shell
+   Layer 1 curated data · Layer 2 rule engine · Layer 3 mobile UI
+   ===================================================================== */
+
+/* ------------------------------ sources ------------------------------ */
+const SRC = {
+  nm:{zh:'北部都会区官方愿景（约 250 万人口 / 65 万职位）',en:'Northern Metropolis vision (~2.5M residents / 650k jobs)',url:'https://www.nm.gov.hk/en/northern-metropolis',v:'2026-01-21'},
+  phasing:{zh:'政府 transport 规划答复（粉岭北/古洞北分期入伙、古洞站 2027）',en:'Govt transport-planning reply (phased intake, Kwu Tung Stn 2027)',url:'https://www.info.gov.hk/gia/general/202601/21/P2026012100234p.htm',v:'2026-01-21'},
+  furniture:{zh:'政府答复：弃置家具无独立统计，重用通常优于拆解回收',en:'Govt reply: no separate stats on discarded furniture; reuse preferred',url:'https://www.info.gov.hk/gia/general/202411/06/P2024110600261.htm',v:'2024-11-06'},
+  wprs:{zh:'香港 WPRS：购买受管制电器时卖家须应要求免费移走同类旧电器（是服务，不是现金）',en:'HK PRS: seller must arrange free removal of same-class old appliance (service, not cash)',url:'https://www.epd.gov.hk/epd/english/environmentinhk/waste/pro_responsibility/index.html',v:'2026-02-10'},
+  szbulky:{zh:'深圳大件家具预约收集（搬到指定临时堆放点或联系物业）',en:'Shenzhen appointment-based bulky furniture collection',url:'https://www.sz.gov.cn/ztfw/gysy/wyc_183959/wsljcl/content/post_11466542.html',v:'2026-02-10'},
+  szsub:{zh:'深圳 2026 家电以旧换新：15% 补贴，单件上限 RMB 1,500（属购买补贴）',en:'Shenzhen 2026 trade-in: 15% subsidy, cap RMB1,500 (purchase subsidy)',url:'https://www.sz.gov.cn/cn/xxgk/zfxxgj/zwdt/content/post_12661713.html',v:'2026-02-10'},
+  recycle:{zh:'DATA.GOV.HK 回收点数据集',en:'DATA.GOV.HK recyclable collection points',url:'https://data.gov.hk/en-data/dataset/hk-epd-recycteam-waste-less-recyclable-collection-points-data',v:'2026-02-10'},
+  fehd:{zh:'DATA.GOV.HK 食环署设施与服务地点',en:'DATA.GOV.HK FEHD facility locations',url:'https://data.gov.hk/tc-data/dataset/hk-fehd-fehdlocatn-fehd-facility-and-service-locations',v:'2026-02-10'},
+  emsd:{zh:'机电工程署家居电器安全指引（220V/50Hz、合规插头）',en:'EMSD household electrical product safety guidance',url:'https://wcms.emsd.gov.hk/en/electricity_safety/information_for_the_electrical_trade/electricity_news/38th_issue_oct_2025/index.html',v:'2025-10-01'},
+  customs:{zh:'香港海关：废弃受管制电器进出口受管制，实际情形须向官方确认',en:'HK Customs: import/export of abandoned regulated e-equipment is controlled',url:'https://www.customs.gov.hk/en/service-enforcement-information/cargo-clearance/faqs/index.html',v:'2026-02-10'},
+  pcpd:{zh:'个人资料私隐专员公署：AI 处理个人资料需持续风险评估',en:'PCPD: ongoing risk assessment where AI processes personal data',url:'https://www.pcpd.org.hk/english/news_events/media_statements/press_20260519.html',v:'2026-05-19'}
+};
+
+/* ------------------------------ estates ------------------------------ */
+const ESTATES = {
+  kwutung:{
+    zh:'古洞北', en:'Kwu Tung North',
+    note:{zh:'古洞站预计 2027 年启用；零售与社区设施仍分期建设，入伙初期配套最薄弱。',
+          en:'Kwu Tung Station expected 2027; retail and community facilities still rolling out.'},
+    f:{ supermarket:{st:'pl',avail:.25,eta:{zh:'2027–2028',en:'2027–2028'},src:'phasing'},
+        retail:{st:'no',avail:.12,eta:{zh:'2028 以后',en:'2028+'},src:'phasing'},
+        furniture:{st:'no',avail:.05,eta:{zh:'2028 以后',en:'2028+'},src:'phasing'},
+        appliance:{st:'no',avail:.10,eta:{zh:'2028 以后',en:'2028+'},src:'phasing'},
+        recycling:{st:'pl',avail:.30,eta:{zh:'随入伙分期',en:'phased'},src:'recycle'},
+        delivery:{st:'pl',avail:.35,eta:{zh:'覆盖不全',en:'partial'},src:'phasing'},
+        transport:{st:'pl',avail:.20,eta:{zh:'古洞站 2027',en:'Station 2027'},src:'phasing'} }
+  },
+  fanling:{
+    zh:'粉岭北', en:'Fanling North',
+    note:{zh:'预计 2026 年中至 2027 迎来约 5.5 万新增居民；部分配套依托既有粉岭社区。',
+          en:'~55k additional residents mid-2026 to 2027; partly served by existing Fanling.'},
+    f:{ supermarket:{st:'op',avail:.55,eta:{zh:'部分运营',en:'partly open'},src:'phasing'},
+        retail:{st:'pl',avail:.50,eta:{zh:'2027–2028',en:'2027–2028'},src:'phasing'},
+        furniture:{st:'pl',avail:.35,eta:{zh:'2027–2028',en:'2027–2028'},src:'phasing'},
+        appliance:{st:'pl',avail:.30,eta:{zh:'2027–2028',en:'2027–2028'},src:'phasing'},
+        recycling:{st:'op',avail:.50,eta:{zh:'已有回收点',en:'existing'},src:'recycle'},
+        delivery:{st:'op',avail:.60,eta:{zh:'基本覆盖',en:'mostly'},src:'phasing'},
+        transport:{st:'op',avail:.45,eta:{zh:'现有铁路/巴士',en:'rail + bus'},src:'phasing'} }
+  },
+  hungshui:{
+    zh:'洪水桥', en:'Hung Shui Kiu',
+    note:{zh:'发展较为成熟，零售与交通配套相对齐备；可购买的品类和价格选择更多。',
+          en:'More mature; wider retail and transport provision.'},
+    f:{ supermarket:{st:'op',avail:.72,eta:{zh:'已运营',en:'operating'},src:'fehd'},
+        retail:{st:'op',avail:.65,eta:{zh:'已运营',en:'operating'},src:'fehd'},
+        furniture:{st:'pl',avail:.50,eta:{zh:'部分运营',en:'partly open'},src:'fehd'},
+        appliance:{st:'op',avail:.58,eta:{zh:'已运营',en:'operating'},src:'fehd'},
+        recycling:{st:'op',avail:.60,eta:{zh:'已有回收点',en:'existing'},src:'recycle'},
+        delivery:{st:'op',avail:.70,eta:{zh:'覆盖良好',en:'good'},src:'fehd'},
+        transport:{st:'op',avail:.55,eta:{zh:'现有铁路/巴士',en:'rail + bus'},src:'phasing'} }
+  }
+};
+const CONSUMABLE = {daily:true};
+const CAT2F = {
+  essential:'supermarket', daily:'supermarket', kitchenware:'supermarket',
+  clothing:'retail', decor:'retail', furniture:'furniture',
+  appliance_s:'appliance', appliance_m:'appliance', appliance_l:'appliance', electronics:'appliance'
+};
+
+/* ------------------------------ catalog ------------------------------ */
+const CATALOG = [
+  {id:'doc',  zh:'证件、签证与租约文件', en:'ID, visa & tenancy documents', cat:'essential', vol:.01,wt:1, urgency:'immediate', essential:true, repl:null, cond:'good', ico:'🛂'},
+  {id:'med',  zh:'处方药（一个月量）',   en:'Prescription medication (1 month)', cat:'essential', vol:.01,wt:.5, urgency:'immediate', essential:true, repl:null, cond:'good', ico:'💊'},
+  {id:'bed',  zh:'床上用品（被、枕、床单）', en:'Bedding (quilt, pillows, sheets)', cat:'essential', vol:.14,wt:5, urgency:'immediate', essential:true, repl:700, cond:'good', ico:'🛏'},
+  {id:'cl7',  zh:'基本衣物（7 天）',     en:'Basic clothing (7 days)', cat:'clothing', vol:.05,wt:4, urgency:'immediate', essential:true, repl:900, cond:'good', ico:'👕'},
+  {id:'lap',  zh:'笔记本电脑 + 充电器',  en:'Laptop + charger', cat:'electronics', vol:.01,wt:2, urgency:'immediate', essential:true, repl:8000, cond:'good', appliance:true, volt:'100–240V', plug:'USB-C', plugOk:true, ico:'💻'},
+  {id:'ada',  zh:'转换插头 / 拖板',      en:'Travel adaptor / power strip', cat:'electronics', vol:.005,wt:.4, urgency:'immediate', essential:true, repl:120, cond:'good', appliance:true, volt:'—', plug:'英标', plugOk:true, ico:'🔌'},
+  {id:'toi',  zh:'洗漱用品与毛巾',       en:'Toiletries & towels', cat:'daily', vol:.03,wt:1.5, urgency:'high', repl:250, cond:'good', ico:'🧴'},
+  {id:'cle',  zh:'清洁用品与杂物',       en:'Cleaning supplies & sundries', cat:'daily', vol:.09,wt:6, urgency:'medium', repl:220, cond:'good', ico:'🧹'},
+  {id:'pot',  zh:'基本炊具（锅、刀、砧板）', en:'Basic cookware (pot, knife, board)', cat:'kitchenware', vol:.05,wt:3, urgency:'high', repl:600, cond:'good', ico:'🍳'},
+  {id:'lamp', zh:'台灯',                 en:'Desk lamp', cat:'appliance_s', vol:.02,wt:1.5, urgency:'medium', repl:280, cond:'good', appliance:true, volt:'220V', plug:'国标两脚', plugOk:false, ico:'💡'},
+  {id:'rice', zh:'电饭煲',               en:'Rice cooker', cat:'appliance_m', vol:.035,wt:4, urgency:'medium', repl:520, cond:'good', appliance:true, volt:'220V', plug:'国标三脚', plugOk:false, regulated:true, ico:'🍚'},
+  {id:'mw',   zh:'微波炉',               en:'Microwave oven', cat:'appliance_m', vol:.07,wt:12, urgency:'low', repl:900, cond:'good', appliance:true, volt:'220V', plug:'国标三脚', plugOk:false, regulated:true, ico:'🔆'},
+  {id:'desk', zh:'书桌',                 en:'Desk', cat:'furniture', vol:.38,wt:25, urgency:'medium', repl:1300, cond:'good', ico:'🪑'},
+  {id:'mat',  zh:'床垫（1.5 米）',        en:'Mattress (1.5m)', cat:'furniture', vol:.58,wt:30, urgency:'high', repl:3600, cond:'good', ico:'🛏'},
+  {id:'sofa', zh:'三人沙发',             en:'3-seater sofa', cat:'furniture', vol:2.2,wt:60, urgency:'low', repl:6200, cond:'good', ico:'🛋'},
+  {id:'wdr',  zh:'衣柜',                 en:'Wardrobe', cat:'furniture', vol:1.4,wt:45, urgency:'low', repl:4200, cond:'good', ico:'🚪'},
+  {id:'win',  zh:'冬季衣物与被褥',        en:'Winter clothing & quilts', cat:'clothing', vol:.16,wt:9, urgency:'low', repl:1600, cond:'good', ico:'🧥'},
+  {id:'dec',  zh:'书籍与装饰品',          en:'Books & decorations', cat:'decor', vol:.18,wt:14, urgency:'low', repl:900, cond:'good', ico:'📚'}
+];
+
+/* 深圳侧待处置物品 */
+const UNWANTED = [
+  {id:'fridge', zh:'旧冰箱（仍能正常使用）', en:'Old fridge (still working)', cat:'appliance_l', side:'sz', unwanted:true,
+   cond:'working', vol:.85,wt:70, appliance:true, volt:'220V', plug:'国标三脚', plugOk:false, regulated:true, resale:650, ico:'🧊'},
+  {id:'wash',   zh:'旧洗衣机（已损坏）',    en:'Old washing machine (broken)', cat:'appliance_l', side:'sz', unwanted:true,
+   cond:'broken', vol:.5,wt:55, appliance:true, volt:'220V', plug:'国标三脚', plugOk:false, regulated:true, resale:0, ico:'🌀'},
+  {id:'shelf',  zh:'旧书架（层板已变形）',  en:'Old bookshelf (warped shelves)', cat:'furniture', side:'sz', unwanted:true,
+   cond:'poor', vol:.4,wt:18, resale:0, ico:'📕'},
+  {id:'osofa',  zh:'旧沙发（布面磨损）',    en:'Old sofa (worn fabric)', cat:'furniture', side:'sz', unwanted:true,
+   cond:'poor', vol:1.9,wt:55, resale:0, ico:'🛋'},
+  {id:'strol',  zh:'儿童推车（用旧但完好）', en:'Stroller (used, sound)', cat:'furniture', side:'sz', unwanted:true,
+   cond:'fair', vol:.18,wt:9, resale:260, ico:'🍼'}
+];
+
+/* 模拟 AI 识别结果（明确标注为 mock） */
+const AI_MOCK = [
+  {guess:{zh:'餐桌',en:'Dining table'}, conf:.71, wrong:true,
+   patch:{id:'desk', name:{zh:'书桌（宜家 MALM）',en:'Desk (IKEA MALM)'}, vol:.38, wt:25, cat:'furniture', urgency:'medium', repl:1300}},
+  {guess:{zh:'床上用品',en:'Bedding'}, conf:.94, wrong:false, patch:null},
+  {guess:{zh:'电饭煲',en:'Rice cooker'}, conf:.88, wrong:false, patch:null}
+];
+
+/* ------------------------------ i18n ------------------------------ */
+let LANG = 'zh';
+const T = {
+  tab:{plan:{zh:'计划',en:'Plan'},items:{zh:'清单',en:'Items'},rec:{zh:'处置',en:'Recover'},more:{zh:'更多',en:'More'}},
+  hd:{plan:{zh:'搬迁计划',en:'Move plan'},items:{zh:'物品清单',en:'Inventory'},rec:{zh:'物品处置',en:'Item recovery'},more:{zh:'设置与来源',en:'Settings & sources'}},
+  sub:{zh:'%e · %m 入住 · %h',en:'%e · move-in %m · %h'},
+  cond:{good:{zh:'良好',en:'Good'},fair:{zh:'尚可',en:'Fair'},poor:{zh:'较差',en:'Poor'},broken:{zh:'已损坏',en:'Broken'},working:{zh:'可用',en:'Working'}},
+  urg:{immediate:{zh:'首晚必需',en:'Night 1'},high:{zh:'高度急需',en:'High'},medium:{zh:'中等',en:'Medium'},low:{zh:'低优先',en:'Low'}},
+  st:{op:{zh:'运营中',en:'Operating'},pl:{zh:'计划中',en:'Planned'},no:{zh:'暂无',en:'None'}},
+  cat:{essential:{zh:'必需随身',en:'Essential'},daily:{zh:'日用品',en:'Daily'},kitchenware:{zh:'厨具',en:'Kitchenware'},
+       clothing:{zh:'衣物',en:'Clothing'},decor:{zh:'书与装饰',en:'Books & decor'},furniture:{zh:'家具',en:'Furniture'},
+       appliance_s:{zh:'小家电',en:'Small appl.'},appliance_m:{zh:'中型家电',en:'Appliance'},appliance_l:{zh:'大型家电',en:'Large appl.'},
+       electronics:{zh:'电子产品',en:'Electronics'}},
+  fac:{supermarket:{zh:'超市与日用',en:'Supermarket'},retail:{zh:'衣着零售',en:'Clothing retail'},furniture:{zh:'家具零售',en:'Furniture retail'},
+       appliance:{zh:'家电零售',en:'Appliance retail'},recycling:{zh:'回收点',en:'Recycling'},delivery:{zh:'配送服务',en:'Delivery'},transport:{zh:'交通配套',en:'Transport'}},
+  trip:{
+    t1:{zh:'第 1 趟 · 首晚生存',en:'Trip 1 · Immediate living',when:{zh:'入住当天',en:'Move-in day'}},
+    t2:{zh:'第 2 趟 · 日常舒适',en:'Trip 2 · Daily comfort',when:{zh:'入住后 1–4 周',en:'1–4 weeks after'}},
+    t3:{zh:'第 3 趟 · 安顿可选',en:'Trip 3 · Optional',when:{zh:'入住后 1–3 个月',en:'1–3 months after'}},
+    buy:{zh:'在香港购买',en:'Buy in HK',when:{zh:'按本地设施到位情况',en:'As local supply opens'}}
+  },
+  act:{T1:{zh:'第 1 趟',en:'Trip 1'},T2:{zh:'第 2 趟',en:'Trip 2'},T3:{zh:'第 3 趟',en:'Trip 3'},BUY:{zh:'香港购买',en:'Buy in HK'},SZ:{zh:'深圳处理',en:'Handle in SZ'}},
+  ben:{cash:{zh:'现金回收',en:'Cash'},subsidy:{zh:'购买补贴',en:'Subsidy'},free:{zh:'免费清运',en:'Free removal'},fee:{zh:'付费处置',en:'Paid disposal'},none:{zh:'无金钱收益',en:'No cash'}},
+  benNote:{cash:{zh:'真实现金收入',en:'Actual cash received'},
+           subsidy:{zh:'购买新品时的折扣，不是回收款',en:'Discount on a new purchase — NOT a recycling payment'},
+           free:{zh:'免费上门移走，不含任何现金',en:'Free removal — no cash involved'},
+           fee:{zh:'你需要支付费用',en:'You pay a fee'},
+           none:{zh:'不产生金钱收益',en:'No money changes hands'}},
+  feas:{ok:{zh:'可操作',en:'Available'},cond:{zh:'有条件',en:'Conditional'},no:{zh:'不适用',en:'N/A'}},
+  conf:{high:{zh:'高',en:'High'},medium:{zh:'中',en:'Medium'},low:{zh:'低',en:'Low'}},
+  /* onboarding */
+  obSkip:{zh:'跳过',en:'Skip'},
+  obBack:{zh:'上一步',en:'Back'},
+  obNext:{zh:'下一步',en:'Next'},
+  obStart:{zh:'开始规划',en:'Start planning'},
+  obFinish:{zh:'生成我的计划',en:'Build my plan'},
+  ob1k:{zh:'LOOPMOVE',en:'LOOPMOVE'},
+  ob1q:{zh:'从深圳搬到香港北部都会区，不必一次搬完。',en:'Moving from Shenzhen to the Northern Metropolis does not have to happen in one trip.'},
+  ob1h:{zh:'我们会根据你的目的地、入住时间和家庭情况，把每一件物品分配到合适的那一趟 —— 或者干脆建议在香港买、留下、卖掉或回收。每个建议都会告诉你依据。',
+        en:'Based on your destination, move-in date and household, every item is assigned to the right trip — or routed to buy locally, keep, sell, donate or recycle. Every recommendation shows its reasoning.'},
+  ob1l:{zh:'· 目的地成熟度决定「能不能在当地买到」\n· 电器合规一票否决\n· 回收不等于拿到钱',
+        en:'· Destination readiness decides what you can buy locally\n· Electrical compliance is a hard veto\n· Recycling does not mean getting paid'},
+  ob2q:{zh:'你现在住在深圳哪个区？',en:'Which district of Shenzhen are you in?'},
+  ob3q:{zh:'准备搬到哪个社区？',en:'Which community are you moving to?'},
+  ob3h:{zh:'这些社区仍在分期建设中，配套成熟度差异很大 —— 这直接决定你哪些东西必须自带。',
+        en:'These communities are still being built out. Readiness differs a lot — and it decides what you must bring.'},
+  ob4q:{zh:'预计什么时候入住？',en:'When do you expect to move in?'},
+  ob5q:{zh:'同住的家庭构成是？',en:'Who is moving with you?'},
+  ob6q:{zh:'打算分几趟完成搬迁？',en:'How many trips do you plan?'},
+  ob6h:{zh:'保留深圳住所或仓储的过渡期，是分阶段搬迁能成立的前提。',en:'Keeping temporary access to your Shenzhen home or storage is what makes a phased move feasible.'},
+  obGen:{zh:'正在按 %e 的设施成熟度计算分趟方案…',en:'Computing a phased plan for %e…'},
+  obDone:{zh:'已生成初始清单与分趟建议',en:'Initial inventory and trip plan ready'},
+  obReady:{zh:'进入计划',en:'Open my plan'},
+  /* plan */
+  sumCost:{zh:'运输总成本',en:'Transport cost'},
+  sumItems:{zh:'物品件数',en:'Items'},
+  sumT1:{zh:'首晚必需',en:'Night-one'},
+  sumFlag:{zh:'需留意',en:'Flags'},
+  planTrips:{zh:'分趟安排 · 按住 ⋮⋮ 可拖动到其他趟次',en:'Trips · hold ⋮⋮ and drag to another trip'},
+  emptyBk:{zh:'拖到这里',en:'Drop items here'},
+  szList:{zh:'深圳侧待办',en:'Shenzhen action list'},
+  szSub:{zh:'%n 件物品待处理',en:'%n items to handle'},
+  goRec:{zh:'去处理 →',en:'Handle →'},
+  planNote:{zh:'所有建议均来自规则引擎与已核实来源，可点开查看完整决策链。运输成本为 demo 参数（基础 HK$60 + HK$900/m³ + HK$3/kg），正式版须以实际报价替换。',
+            en:'Every recommendation comes from the rule engine and verified sources — tap an item for the full trace. Transport cost uses demo parameters (base HK$60 + HK$900/m³ + HK$3/kg); replace with real quotes.'},
+  overridden:{zh:'已手动调整',en:'Manual'},
+  /* items */
+  aiTitle:{zh:'拍照识别（演示用模拟结果）',en:'Photo recognition (mocked)'},
+  aiSub:{zh:'不调用真实模型。重点是演示「识别 → 你纠正 → 全盘重算」。',en:'No live model is called. This demonstrates recognise → correct → recompute.'},
+  aiBtn:{zh:'拍一张试试',en:'Try a photo'},
+  aiRes:{zh:'识别为「%g」，置信度 %c%',en:'Recognised “%g” at %c% confidence'},
+  aiWrong:{zh:'识别错误 —— 点此纠正',en:'Wrong — tap to correct'},
+  aiFix:{zh:'已纠正为「%t」，计划已重算',en:'Corrected to “%t”; the plan was recomputed'},
+  aiOk:{zh:'识别正确，已加入清单',en:'Correct; added to your inventory'},
+  fAll:{zh:'全部',en:'All'},
+  addItem:{zh:'+ 添加物品',en:'+ Add item'},
+  edit:{zh:'编辑物品',en:'Edit item'},
+  del:{zh:'从清单移除',en:'Remove from inventory'},
+  /* recover */
+  recLeg:{zh:'收益性质说明',en:'What each benefit means'},
+  rNet:{zh:'净结果',en:'Net result'},
+  rChan:{zh:'推荐渠道',en:'Recommended channel'},
+  rSkip:{zh:'稍后决定',en:'Later'},
+  rAccept:{zh:'采纳这个渠道',en:'Accept this channel'},
+  rSwipe:{zh:'左右滑动切换渠道 · 点卡片看全部对比',en:'Swipe to switch channel · tap for full comparison'},
+  rDone:{zh:'深圳侧处理清单已生成',en:'Your Shenzhen action list is ready'},
+  rDoneS:{zh:'%n 件物品已分配渠道，净结果合计 %v。每一条都需与提供方最终确认。',en:'%n items routed; combined net %v. Every entry still needs confirmation with the provider.'},
+  rAgain:{zh:'重新处理',en:'Start over'},
+  confirmL:{zh:'须向提供方确认',en:'Confirm with provider'},
+  /* sheet */
+  traceT:{zh:'决策链',en:'Decision trace'},
+  offersT:{zh:'全部渠道对比',en:'All channels'},
+  srcT:{zh:'依据来源',en:'Sources'},
+  whyT:{zh:'结论',en:'Outcome'},
+  /* more */
+  mFac:{zh:'目的地与设施',en:'Destination & facilities'},
+  mPref:{zh:'偏好与模式',en:'Preferences'},
+  mBound:{zh:'系统边界',en:'Boundaries'},
+  mSrc:{zh:'数据来源',en:'Data sources'},
+  lang:{zh:'语言',en:'Language'}, langS:{zh:'中文 / English',en:'中文 / English'},
+  assist:{zh:'物管协助模式',en:'Assisted mode'}, assistS:{zh:'放大字号，供工作人员代居民操作',en:'Larger text for staff operating on a resident\'s behalf'},
+  buyNew:{zh:'计划在深圳购买新家电',en:'Planning to buy a new appliance in Shenzhen'},
+  buyNewS:{zh:'勾选后，以旧换新「购买补贴」才参与排序',en:'Tick to let the trade-in purchase subsidy enter the ranking'},
+  print:{zh:'导出 / 打印计划',en:'Export / print plan'},
+  reOb:{zh:'重新演示引导流程',en:'Replay onboarding'},
+  boundTxt:{zh:'本系统只做规划与决策支持：不代为搬运、不承诺转卖价或补贴、不提供清关或法律结论、不自动下单或转账。电器跨境须检查电压与插头；废弃受管制电器的进出口受管制，须向海关与环保署确认。',
+            en:'Planning support only: no moving, no guaranteed resale price or subsidy, no customs or legal advice, no booking or payments. Check voltage and plugs before shipping appliances; the import/export of abandoned regulated e-equipment is controlled — confirm with Customs and EPD.'},
+  lastV:{zh:'核查于',en:'verified'},
+  /* toast */
+  tMove:{zh:'「%n」→ %a · %d',en:'“%n” → %a · %d'},
+  tSave:{zh:'省下 %v',en:'saves %v'}, tCost:{zh:'多花 %v',en:'costs %v extra'}, tSame:{zh:'成本不变',en:'no cost change'},
+  tReset:{zh:'已恢复系统建议',en:'Reset to the system recommendation'},
+  tAccept:{zh:'已记录：%i → %o',en:'Recorded: %i → %o'},
+  aiUsed:{zh:'识别辅助已使用',en:'recognition used'}
+};
+
+/* ------------------------------ state ------------------------------ */
+const S = {
+  estate:'kwutung', movein:'2026-09', household:'couple', origin:'futian', ntrips:3,
+  items: CATALOG.map(o=>({...o})),
+  unwanted: UNWANTED.map(o=>({...o})),
+  decisions:{},            // itemId -> offerId
+  recIdx:{},               // itemId -> 当前展示的渠道下标
+  tab:'plan', assist:false, buyNew:false, aiUsed:false, obStep:0
+};
+const HH = [{k:'single',zh:'单人',en:'Single',ico:'🧍'},{k:'couple',zh:'两人（伴侣）',en:'Couple',ico:'👫'},
+            {k:'family',zh:'家庭（含儿童）',en:'Family with children',ico:'👨‍👩‍👧'},{k:'elderly',zh:'与长辈同住',en:'With elderly',ico:'👴'}];
+const ORIGIN = [{k:'futian',zh:'福田',en:'Futian',ico:'🏙'},{k:'nanshan',zh:'南山',en:'Nanshan',ico:'🌊'},
+                {k:'longhua',zh:'龙华',en:'Longhua',ico:'🏭'},{k:'baoan',zh:'宝安',en:"Bao'an",ico:'✈️'},{k:'luohu',zh:'罗湖',en:'Luohu',ico:'🚉'}];
+const MOVEIN = (()=>{const a=[];for(let y=2026;y<=2028;y++)for(let m=1;m<=12;m+=3)a.push(y+'-'+String(m).padStart(2,'0'));return a;})();
+const NTR = [2,3,4,5];
+
+const $  = s=>document.querySelector(s);
+const $$ = s=>[...document.querySelectorAll(s)];
+const L  = o => {
+  if(o===null||o===undefined) return o;
+  if(Array.isArray(o)) return o.map(L);
+  if(typeof o==='object'){
+    const ks=Object.keys(o);
+    if(ks.length===2 && 'zh' in o && 'en' in o) return o[LANG];
+    const r={}; for(const k of ks) r[k]=L(o[k]); return r;
+  }
+  return o;
+};
+const T_ = new Proxy({}, { get:(_,k)=>L(T[k]) });
+const HKD = n => 'HK$' + Math.round(n).toLocaleString('en-US');
+const HKDN = n => (n>0?'+':n<0?'−':'') + 'HK$' + Math.abs(Math.round(n)).toLocaleString('en-US');
+const RATE = {base:60, vol:900, wt:3};
+const CONDF = {good:1, fair:.7, poor:.35, broken:.05, working:.85};
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* ====================== LAYER 2: RULE ENGINE ====================== */
+function transportCost(it){ return Math.round(RATE.base + it.vol*RATE.vol + it.wt*RATE.wt); }
+
+function compliance(it){
+  const tr=[];
+  if(it.appliance){
+    if(!it.plugOk){
+      tr.push({k:'warn', detail:{zh:'插头为「'+it.plug+'」，不符合香港本地供应电器要求（220V/50Hz + 合规英标插头）。跨境电器未必可立即安全使用。',
+                                 en:'Plug type "'+it.plug+'" does not meet HK requirements (220V/50Hz + compliant plug).'}});
+    } else {
+      tr.push({k:'ok', detail:{zh:'电压/插头兼容（'+it.volt+'），无需改装。',en:'Voltage/plug compatible ('+it.volt+').'}});
+    }
+    if(it.regulated && it.side==='sz' && it.unwanted){
+      return {level:'blocked', notes:tr.concat([{k:'block', detail:{zh:'属受管制电器设备。香港对废弃受管制电器设备的进出口有管制，个人行李非贸易用途或可豁免，但实际情形须向海关/环保署确认。本系统不提供清关结论。',
+        en:'Regulated electrical equipment. HK controls import/export of abandoned regulated e-equipment; personal baggage may be exempt but must be confirmed with Customs/EPD. This system gives no clearance advice.'}}]),
+        src:['customs','emsd']};
+    }
+    return {level: tr.some(t=>t.k==='warn')?'caution':'ok', notes:tr, src:['emsd']};
+  }
+  return {level:'ok', notes:[{k:'ok',detail:{zh:'非电器类，无电气合规限制。',en:'Non-electrical item; no electrical compliance constraint.'}}], src:[]};
+}
+
+function decideMove(it){
+  const est=ESTATES[S.estate], fkey=CAT2F[it.cat]||'supermarket', fac=est.f[fkey], cmp=compliance(it), tr=[];
+  tr.push({k:'rule', label:{zh:'① 合规检查',en:'1. Compliance'},
+    v: cmp.level==='blocked'?{zh:'阻断',en:'Blocked'}:cmp.level==='caution'?{zh:'需注意',en:'Caution'}:{zh:'通过',en:'Pass'},
+    hl:cmp.level!=='ok', bad:cmp.level==='blocked', d:cmp.notes.map(n=>n.detail)});
+  if(cmp.level==='blocked'){
+    return {action:'SZ', trip:'sz', conf:'high', trace:tr, flags:['customs'],
+      why:{zh:'受管制电器，不得凭本系统结论跨境运输 —— 转由深圳侧处置。',
+           en:'Regulated appliance: must not be shipped on this system\'s advice. Routed to Shenzhen handling.'}};
+  }
+  const urg=it.urgency, avail=fac.avail, tc=transportCost(it), repl=it.repl;
+  tr.push({k:'fact', label:{zh:'② 急迫性',en:'2. Urgency'}, v:T_.urg[urg],
+    d:[it.essential?{zh:'标记为不可替代 / 首晚必需。',en:'Marked irreplaceable / night-one essential.'}:{zh:'按使用时间点排序。',en:'Ranked by when it is actually needed.'}]});
+  tr.push({k:'fact', label:{zh:'③ 目的地可获得性',en:'3. Local availability'}, v:Math.round(avail*100)+'% · '+T_.fac[fkey], hl:avail<.4,
+    d:[{zh:est.zh+'｜'+T_.fac[fkey]+'：'+T_.st[fac.st]+'（'+L(fac.eta)+'）', en:est.en+' — '+T_.fac[fkey]+': '+T_.st[fac.st]+' ('+L(fac.eta)+')'}]});
+  tr.push({k:'fact', label:{zh:'④ 跨境运输成本',en:'4. Transport cost'}, v:HKD(tc),
+    d:[{zh:'体积 '+it.vol+' m³ × '+RATE.vol+' + 重量 '+it.wt+' kg × '+RATE.wt+' + 基础分摊 '+RATE.base,
+        en:'Volume '+it.vol+'m³ × '+RATE.vol+' + weight '+it.wt+'kg × '+RATE.wt+' + base '+RATE.base}]});
+  tr.push({k:'fact', label:{zh:'⑤ 香港重置成本',en:'5. Replacement cost in HK'},
+    v: repl==null?{zh:'不可替代',en:'Irreplaceable'}:HKD(repl),
+    d: repl==null?[{zh:'无法用金钱重置（证件、药品等）。',en:'Cannot be replaced by purchase.'}]:[{zh:'在香港同类购置的估计价格。',en:'Estimated price to buy equivalent in HK.'}]});
+
+  const buyEff = repl==null?null:Math.round(repl*(1+(1-avail)*0.8));
+  const pct=Math.round(avail*100), etaTxt=L(fac.eta);
+  const tripOf = u => (u==='immediate'||u==='high')?'T1':u==='medium'?'T2':'T3';
+  let action, rule, conf='high', why, calc;
+
+  if(repl==null || it.essential){
+    action='T1'; rule='essential';
+    why={zh:'不可替代或首晚必需 —— 不参与经济比较，直接进第 1 趟。',
+         en:'Irreplaceable or night-one essential: excluded from the economic comparison, placed in trip 1.'};
+    calc='不可替代 → 不参与经济比较\n→ Trip 1';
+  }
+  else if(it.appliance && !it.plugOk){
+    if(avail>=.35){
+      action='BUY'; rule='compliance';
+      why={zh:'插头/电压不符合香港要求（'+it.plug+'），不应跨境直接使用。建议抵港后购买合规版本。',
+           en:'Plug/voltage does not meet HK requirements ('+it.plug+'). Buy a compliant version after arrival instead of shipping it.'};
+      calc='合规检查 = 未通过（'+it.plug+'）\n当地家电零售可获得性 '+pct+'% ≥ 35% → 可购买合规版本\n→ 在香港购买';
+    } else {
+      action=tripOf(urg); rule='compliance_fallback'; conf='low';
+      why={zh:'电器不合规，但'+est.zh+'的'+T_.fac[fkey]+'仅 '+pct+'%（'+etaTxt+'），当地暂买不到 → 只能带走，但必须更换合规插头并经检验后使用。',
+           en:'Non-compliant, but '+T_.fac[fkey]+' near '+est.en+' is only '+pct+'% ('+etaTxt+'); buying locally is not yet possible. Take it, but replace the plug and have it checked before use.'};
+      calc='合规检查 = 未通过（'+it.plug+'）\n当地'+T_.fac[fkey]+'可获得性 '+pct+'% < 35% → 当地购买暂不可行\n降级：带走 + 强制安全处理\n置信度降为「低」，需人工复核';
+    }
+  }
+  else if(CONSUMABLE[it.cat] && avail>=.5){
+    action='BUY'; rule='consumable';
+    why={zh:'属日用消耗品，'+est.zh+'本地超市可获得性 '+pct+'% → 抵达后购买即可，不占用跨境运输额度。',
+         en:'A consumable; supermarket availability near '+est.en+' is '+pct+'%. Buy on arrival rather than spending cross-border capacity on it.'};
+    calc='运输成本 '+HKD(tc)+' vs 物品价值 '+HKD(repl)+'\n本地可获得性 '+pct+'% ≥ 50% → 当地购买';
+  }
+  else if(tc>repl*0.6 && avail>=.4){
+    action='BUY'; rule='bulky_cheap'; conf='medium';
+    why={zh:'运输成本 '+HKD(tc)+' 已超过重置价 '+HKD(repl)+' 的 60%，且本地可获得性 '+pct+'% → 当地购买更合理。',
+         en:'Transport '+HKD(tc)+' exceeds 60% of replacement ('+HKD(repl)+') and local availability is '+pct+'%: buying locally is better.'};
+    calc='运输 '+HKD(tc)+' > 重置价 '+HKD(repl)+' × 0.6 = '+HKD(repl*0.6)+'\n本地可获得性 '+pct+'% ≥ 40%\n→ 在香港购买';
+  }
+  else {
+    action=tripOf(urg); rule='economic';
+    conf = (tc>repl*0.45)?'medium':'high';
+    why={zh:'运输成本 '+HKD(tc)+' 低于当地重购的实际代价 '+HKD(buyEff)+'（重置价 '+HKD(repl)+' × 本地稀缺系数）→ 带走更划算，按急迫性排入「'+T_.act[action]+'」。',
+         en:'Transport '+HKD(tc)+' is below the effective cost of rebuying ('+HKD(buyEff)+' = '+HKD(repl)+' × local scarcity factor): take it, scheduled by urgency.'};
+    calc='带走成本 = 运输                '+HKD(tc)+'\n当地重购 = 重置价 '+HKD(repl)+' × (1 + (1 − '+avail.toFixed(2)+') × 0.8) = '+HKD(buyEff)+'\n'+HKD(tc)+' < '+HKD(buyEff)+'  →  带走（'+T_.act[action]+'）';
+  }
+
+  const econ = !(rule==='compliance'||rule==='compliance_fallback'||rule==='essential');
+  tr.push({k:'calc', label:{zh:'⑥ 两种方案代价',en:'6. Cost of each option'},
+    v: econ?HKD(tc)+' vs '+HKD(buyEff):{zh:'不适用 —— 由更高优先级规则决定',en:'n/a — a higher-priority rule decides'},
+    d:[ econ?{zh:'带走只需付运费；当地重购要付重置价，并随本地稀缺程度放大。',
+              en:'Moving costs only freight; rebuying costs the replacement price, scaled up by local scarcity.'}
+            :{zh:'合规与不可替代性优先于经济比较，本条不按成本高低取舍。',
+              en:'Compliance and irreplaceability outrank the economic comparison; cost does not decide this item.'}]});
+  tr.push({k:'rule', label:{zh:'⑦ 决策规则',en:'7. Decision rule'}, v:L(why), hl:rule!=='compliance_fallback', bad:rule==='compliance_fallback', calc:calc});
+  tr.push({k:'fact', label:{zh:'⑧ 置信度',en:'8. Confidence'}, v:T_.conf[conf],
+    d:[ conf==='low'
+      ? {zh:'存在未解决的合规问题或信息缺口，置信度降为「低」。执行前须人工复核，并向机电工程署或相关机构确认。',
+         en:'An unresolved compliance issue or information gap: confidence is low. Review manually and confirm with EMSD or the relevant body before acting.'}
+      : (conf==='medium'
+        ? {zh:'两个方案代价较接近（运输成本超过重置价 45%），置信度为「中」，建议复核后再决定。',
+           en:'The two options are close (transport exceeds 45% of replacement cost): medium confidence, review before deciding.'}
+        : {zh:'规则判定明确，且不涉及未解决的合规问题。',
+           en:'The rule outcome is clear and no unresolved compliance issue applies.'})]});
+  return {action:action, trip:action==='BUY'?'buy':'t'+action[1], conf:conf, trace:tr, why:why, rule:rule,
+          flags: cmp.level==='caution'?['emsd']:[], numbers:{tc:tc, repl:repl, buyEff:buyEff, avail:avail}};
+}
+
+function buildOffers(it){
+  const O=[], spare = it.cond==='working'||it.cond==='good'||it.cond==='fair';
+  if(spare && (it.resale||0)>0){
+    O.push({id:'sell', name:{zh:'深圳二手转卖（平台自提）',en:'Sell second-hand in Shenzhen'}, side:'sz', ben:'cash', prio:3, feas:'ok',
+      v:{value:it.resale,subsidy:0,transport:0,handling:0,disposal:0},
+      note:{zh:'需自行议价与交接，平台不担保成交；成交价随成色浮动，须与买方最终确认。',
+            en:'You negotiate and hand over yourself; no guaranteed sale. Final price must be confirmed with the buyer.'}, src:['furniture']});
+  } else {
+    O.push({id:'sell', name:{zh:'深圳二手转卖（平台自提）',en:'Sell second-hand in Shenzhen'}, side:'sz', ben:'none', prio:3, feas:'no',
+      v:{value:0,subsidy:0,transport:0,handling:0,disposal:0},
+      note:{zh:'当前成色（'+T_.cond[it.cond]+'）通常无人承接，不列入可行渠道。',
+            en:'Condition ('+T_.cond[it.cond]+') is normally not accepted; excluded.'}, src:['furniture']});
+  }
+  if(spare){
+    O.push({id:'donate', name:{zh:'深圳公益捐赠（机构上门）',en:'Donate to charity in Shenzhen'}, side:'sz', ben:'none', prio:3, feas:'cond',
+      v:{value:0,subsidy:0,transport:0,handling:0,disposal:0},
+      note:{zh:'无金钱收益。机构通常只接受成色良好、无污损的物品，需提前确认是否上门及可收品类。',
+            en:'No monetary gain. Charities normally accept only clean, sound items; confirm pickup and accepted categories first.'}, src:['furniture']});
+  } else {
+    O.push({id:'donate', name:{zh:'深圳公益捐赠（机构上门）',en:'Donate to charity in Shenzhen'}, side:'sz', ben:'none', prio:3, feas:'no',
+      v:{value:0,subsidy:0,transport:0,handling:0,disposal:0},
+      note:{zh:'成色不达标（'+T_.cond[it.cond]+'），捐赠渠道通常不予接收。',
+            en:'Condition ('+T_.cond[it.cond]+') is below typical donation acceptance.'}, src:['furniture']});
+  }
+  O.push({id:'bulky', name:{zh:'深圳大件家具预约清运',en:'Shenzhen bulky-item collection'}, side:'sz', ben:'free', prio:1, feas:'cond',
+    v:{value:0,subsidy:0,transport:0,handling:0,disposal:0},
+    note:{zh:'需先自行搬到指定临时堆放点，或联系物业管理处预约安排。免费属清运服务，不含任何现金。',
+          en:'Move the item to a designated point first, or book via property management. Free service; no cash.'}, src:['szbulky']});
+
+  if(it.appliance){
+    const sub=Math.round(1500*1.09);
+    O.push({id:'tradein', name:{zh:'深圳家电以旧换新补贴',en:'Shenzhen trade-in subsidy'}, side:'sz', ben:'subsidy', prio:2, feas:'cond', locked:!S.buyNew,
+      v:{value:0,subsidy:sub,transport:0,handling:0,disposal:0},
+      note: S.buyNew
+        ? {zh:'这是「购买新机时的 15% 折扣，单件上限 RMB 1,500」，不是把旧机卖掉拿钱。上面的净额不含你必须支付的新机价款，仅在你本就打算购新时才成立。',
+           en:'A 15% discount on a NEW purchase (cap RMB1,500) — not payment for your old unit. The net figure excludes what you must spend on the new appliance, and only applies if you were buying one anyway.'}
+        : {zh:'本渠道是购买新机的折扣，不是回收款。在你勾选「计划在深圳购买新家电」之前，它不参与推荐排序 —— 系统不会把补贴冒充成回收收入。',
+           en:'This is a discount on a new purchase, not a recycling payment. It stays out of the ranking until you tick "planning to buy a new appliance" — the system never passes a subsidy off as recovery income.'},
+      src:['szsub']});
+  }
+  if(it.regulated){
+    const tc=transportCost(it);
+    O.push({id:'wprs', name:{zh:'香港 WPRS 免费除旧',en:'HK WPRS free removal'}, side:'hk', ben:'free', prio:1, feas:'no',
+      v:{value:0,subsidy:0,transport:0,handling:0,disposal:0},
+      note:{zh:'在香港购买受管制电器时，卖家须应要求免费移走同类旧电器——是移除服务，不是现金付款。但本件在深圳：跨境运废弃受管制电器受管制，且运输成本约 '+HKD(tc)+'，本渠道实际不可行。',
+            en:'When buying a regulated appliance in HK the seller must arrange free removal of the same class — a service, not cash. But this unit is in Shenzhen: shipping abandoned regulated e-equipment across the boundary is controlled, and transport alone is ~'+HKD(tc)+'. Not workable here.'},
+      src:['wprs','customs']});
+  }
+  {
+    const tc=transportCost(it);
+    O.push({id:'hkpaid', name:{zh:'运至香港后付费清运',en:'Ship to HK then paid disposal'}, side:'hk', ben:'fee', prio:0, feas: it.regulated?'no':'cond',
+      v:{value:0,subsidy:0,transport:tc,handling:0,disposal:320},
+      note: it.regulated
+        ? {zh:'受管制电器不得凭本系统结论跨境运输，此渠道不予推荐。',en:'Regulated e-equipment must not be shipped on this system\'s advice; channel not recommended.'}
+        : {zh:'跨境运输 '+HKD(tc)+' + 处置费 '+HKD(320)+'。除非物品确有留港必要，否则不划算。',
+           en:'Transport '+HKD(tc)+' + disposal '+HKD(320)+'. Rarely worthwhile unless the item must reach HK.'},
+      src:['customs','furniture']});
+  }
+  if(it.cond==='broken'){
+    const rv=Math.round(it.wt*2.2);
+    O.push({id:'scrap', name:{zh:'深圳废品回收（按重量）',en:'Shenzhen scrap recycling'}, side:'sz', ben:'cash', prio:2, feas:'ok',
+      v:{value:rv,subsidy:0,transport:0,handling:0,disposal:0},
+      note:{zh:'按 '+it.wt+' kg × 约 HK$2.2/kg 估算的废金属回收价，实际价格随行情浮动。',
+            en:'Estimated at '+it.wt+'kg × ~HK$2.2/kg scrap metal; actual price fluctuates.'}, src:['szbulky']});
+  }
+  O.forEach(o=>{ o.net = o.v.value + o.v.subsidy - o.v.transport - o.v.handling - o.v.disposal; });
+  const viable = O.filter(o=>o.feas!=='no' && !o.locked);
+  const best = viable.slice().sort((a,b)=>(b.net-a.net)||((b.prio||0)-(a.prio||0)))[0] || O[0];
+  O.forEach(o=>{ o.best = (o===best && o.feas!=='no' && !o.locked); });
+  return {offers:O, best:best};
+}
+
+/* 计划：override 优先 */
+function planOf(it){
+  const d=decideMove(it);
+  const act = it.override || d.action;
+  return {d:d, action:act, overridden: !!it.override && it.override!==d.action};
+}
+function costOf(it, act){
+  const n=decideMove(it).numbers;
+  if(act==='BUY') return n.buyEff==null?0:n.buyEff;
+  if(act==='T1'||act==='T2'||act==='T3') return n.tc;
+  return 0;
+}
+
+/* ====================== LAYER 3: MOBILE UI ====================== */
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg){
+  const el=$('#toast'); el.textContent=msg; el.classList.add('on');
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('on'),2400);
+  if(navigator.vibrate) try{navigator.vibrate(12)}catch(e){}
+}
+
+/* ---------- sheet ---------- */
+let sheetOpen=false;
+function openSheet(title, html){
+  $('#shTitle').textContent=title;
+  $('#shBody').innerHTML=html;
+  $('#mask').classList.add('on'); $('#sheet').classList.add('on'); sheetOpen=true;
+}
+function closeSheet(){
+  $('#mask').classList.remove('on'); $('#sheet').classList.remove('on'); sheetOpen=false;
+}
+$('#mask').addEventListener('click', closeSheet);
+$('#shClose').addEventListener('click', closeSheet);
+// 下滑关闭
+(function(){
+  let sy=0, dragging=false;
+  const g=$('#shgrip');
+  g.addEventListener('pointerdown', e=>{ sy=e.clientY; dragging=true; g.setPointerCapture(e.pointerId); });
+  g.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const dy=Math.max(0,e.clientY-sy);
+    $('#sheet').style.transform = dy? 'translateY('+dy+'px)' : '';
+  });
+  g.addEventListener('pointerup', e=>{
+    if(!dragging) return; dragging=false;
+    const dy=e.clientY-sy;
+    $('#sheet').style.transform='';
+    if(dy>70) closeSheet();
+  });
+})();
+
+/* ---------- onboarding ---------- */
+const OB_STEPS=['welcome','origin','estate','movein','household','trips','gen'];
+let obAnswers={};
+function obRender(){
+  const i=S.obStep, key=OB_STEPS[i];
+  $('#obdots').innerHTML = OB_STEPS.map((_,k)=>'<i class="'+(k===i?'on':'')+'"></i>').join('');
+  const body=$('#obbody'), foot=$('#obfoot');
+  const nextBtn = '<button class="btn" id="obNext">'+(i===OB_STEPS.length-2?T_.obFinish:T_.obNext)+'</button>';
+  const backBtn = i>0 ? '<button class="btn ghost" id="obBack" style="width:38%">'+T_.obBack+'</button>' : '';
+  const canNext = ()=>{
+    if(key==='welcome') return true;
+    if(key==='origin') return !!S.origin;
+    if(key==='estate') return !!S.estate;
+    if(key==='movein') return !!S.movein;
+    if(key==='household') return !!S.household;
+    if(key==='trips') return !!S.ntrips;
+    return true;
+  };
+
+  if(key==='welcome'){
+    body.innerHTML =
+      '<div class="ob-k">'+T_.ob1k+'</div>'+
+      '<h2 class="ob-q">'+T_.ob1q+'</h2>'+
+      '<div class="ob-h">'+T_.ob1h+'</div>'+
+      '<div class="card" style="font-size:13px;line-height:1.9;white-space:pre-wrap">'+L(T.ob1l)+'</div>';
+    foot.innerHTML = '<button class="btn" id="obNext">'+T_.obStart+'</button>';
+  }
+  else if(key==='origin'){
+    body.innerHTML = '<div class="ob-k">'+(i)+' / 6</div><h2 class="ob-q">'+T_.ob2q+'</h2>';
+    foot.innerHTML = backBtn+'<button class="btn" id="obNext" style="flex:1">'+T_.obNext+'</button>';
+    let h='<div style="margin-top:14px">';
+    ORIGIN.forEach(o=>{ h+='<div class="opt'+(S.origin===o.k?' on':'')+'" data-k="'+o.k+'"><div class="oi">'+o.ico+'</div><div class="ot"><b>'+o.zh+'</b><span>'+o.en+'</span></div></div>'; });
+    body.innerHTML += h+'</div>';
+  }
+  else if(key==='estate'){
+    body.innerHTML = '<div class="ob-k">'+i+' / 6</div><h2 class="ob-q">'+T_.ob3q+'</h2><div class="ob-h">'+T_.ob3h+'</div>';
+    foot.innerHTML = backBtn+'<button class="btn" id="obNext" style="flex:1">'+T_.obNext+'</button>';
+    let h='';
+    Object.keys(ESTATES).forEach(k=>{
+      const e=ESTATES[k];
+      const avg = Object.values(e.f).reduce((a,b)=>a+b.avail,0)/Object.values(e.f).length;
+      h+= '<div class="opt'+(S.estate===k?' on':'')+'" data-k="'+k+'">'+
+          '<div class="ot"><b>'+e.zh+' <span style="font-weight:500;color:var(--muted);font-size:12px">'+e.en+'</span></b>'+
+          '<span style="margin-top:3px;display:block">'+L(e.note)+'</span>'+
+          '<div class="mini"><span style="flex:0 0 auto">'+(LANG==='zh'?'成熟度':'readiness')+'</span><span class="bar"><i style="width:'+Math.round(avg*100)+'%;background:'+(avg>.5?'#1f8a4c':avg>.3?'#c2740a':'#c2342c')+'"></i></span><span style="flex:0 0 auto">'+Math.round(avg*100)+'%</span></div>'+
+          '</div></div>';
+    });
+    body.innerHTML += h;
+  }
+  else if(key==='movein'){
+    body.innerHTML = '<div class="ob-k">'+i+' / 6</div><h2 class="ob-q">'+T_.ob4q+'</h2>';
+    foot.innerHTML = backBtn+'<button class="btn" id="obNext" style="flex:1">'+T_.obNext+'</button>';
+    body.innerHTML += '<div class="chips" style="margin-top:14px">'+MOVEIN.map(m=>'<div class="chip'+(S.movein===m?' on':'')+'" data-k="'+m+'">'+m+'</div>').join('')+'</div>';
+  }
+  else if(key==='household'){
+    body.innerHTML = '<div class="ob-k">'+i+' / 6</div><h2 class="ob-q">'+T_.ob5q+'</h2>';
+    foot.innerHTML = backBtn+'<button class="btn" id="obNext" style="flex:1">'+T_.obNext+'</button>';
+    body.innerHTML += '<div style="margin-top:14px">'+HH.map(o=>'<div class="opt'+(S.household===o.k?' on':'')+'" data-k="'+o.k+'"><div class="oi">'+o.ico+'</div><div class="ot"><b>'+o.zh+'</b><span>'+o.en+'</span></div></div>').join('')+'</div>';
+  }
+  else if(key==='trips'){
+    body.innerHTML = '<div class="ob-k">'+i+' / 6</div><h2 class="ob-q">'+T_.ob6q+'</h2><div class="ob-h">'+T_.ob6h+'</div>';
+    foot.innerHTML = backBtn+'<button class="btn" id="obNext" style="flex:1">'+T_.obFinish+'</button>';
+    body.innerHTML += '<div class="chips" style="margin-top:14px">'+NTR.map(n=>'<div class="chip'+(S.ntrips===n?' on':'')+'" data-k="'+n+'">'+n+' '+(LANG==='zh'?'趟':'trips')+'</div>').join('')+'</div>';
+  }
+  else if(key==='gen'){
+    body.innerHTML = '<div class="ob-gen"><div class="spin"></div><p>'+T_.obGen.replace('%e', ESTATES[S.estate].zh)+'</p></div>';
+    foot.innerHTML='';
+    setTimeout(()=>{
+      body.innerHTML='<div class="ob-gen"><div style="font-size:52px">✅</div><h2 class="ob-q" style="font-size:20px">'+T_.obDone+'</h2><p>'+T_.obReady+'</p></div>';
+      foot.innerHTML='<button class="btn" id="obNext">'+T_.obReady+'</button>';
+      $('#obNext').onclick=finishOb;
+    },1100);
+    return;
+  }
+
+  body.querySelectorAll('[data-k]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const k=el.dataset.k;
+      if(key==='origin') S.origin=k;
+      if(key==='estate'){ S.estate=k; }
+      if(key==='movein') S.movein=k;
+      if(key==='household') S.household=k;
+      if(key==='trips') S.ntrips=parseInt(k,10);
+      obRender();
+    });
+  });
+  const nb=$('#obNext');
+  if(nb && key!=='gen'){
+    nb.disabled = !canNext();
+    nb.onclick = ()=>{ if(S.obStep < OB_STEPS.length-1){ S.obStep++; obRender(); } };
+  }
+  const bb=$('#obBack');
+  if(bb) bb.onclick = ()=>{ if(S.obStep>0){ S.obStep--; obRender(); } };
+}
+function finishOb(){
+  $('#ob').classList.add('hide');
+  $('#app').style.display='flex';
+  S.obStep=OB_STEPS.length;
+  renderAll();
+  switchTab('plan');
+}
+$('#obskip').addEventListener('click', ()=>{ S.obStep=OB_STEPS.length-2; obRender(); });
+$('#btnReOb').addEventListener('click', ()=>{
+  S.obStep=0; S.decisions={}; S.aiUsed=false;
+  S.items=CATALOG.map(o=>({...o})); S.unwanted=UNWANTED.map(o=>({...o}));
+  $('#ob').classList.remove('hide'); $('#app').style.display='none'; obRender();
+});
+
+/* ---------- header ---------- */
+function renderHeader(){
+  $('#hTitle').textContent = T_.hd[S.tab];
+  const e=ESTATES[S.estate], hh=HH.find(h=>h.k===S.household);
+  $('#hSub').textContent = T_.sub.replace('%e', e.zh).replace('%m', S.movein)
+    .replace('%h', hh? (LANG==='zh'?hh.zh:hh.en) : '');
+  $('#assisttxt').textContent = LANG==='zh' ? '物管协助模式：由工作人员代居民操作' : 'Assisted mode: staff operating on a resident\'s behalf';
+}
+
+/* ---------- plan page ---------- */
+let planFilter='all';
+function renderPlan(){
+  const bks=['T1','T2','T3','BUY'];
+  const groups={T1:[],T2:[],T3:[],BUY:[]};
+  let total=0, flags=0;
+  S.items.forEach(it=>{
+    const p=planOf(it);
+    if(groups[p.action]) groups[p.action].push({it:it,p:p});
+    if(p.action!=='BUY') total += costOf(it,p.action);
+    if(p.d.flags.length || p.d.conf==='low') flags++;
+  });
+  const t1=groups.T1.length, ess=S.items.filter(i=>i.essential).length;
+
+  $('#psum').innerHTML =
+    '<div class="sumc"><b class="mono" data-to="'+total+'">'+HKD(0)+'</b><span>'+T_.sumCost+'</span></div>'+
+    '<div class="sumc"><b class="mono" data-to="'+S.items.length+'">0</b><span>'+T_.sumItems+'</span></div>'+
+    '<div class="sumc"><b class="mono" data-to="'+ess+'">0</b><span>'+T_.sumT1+'</span></div>'+
+    '<div class="sumc"><b class="mono" data-to="'+flags+'" style="color:'+(flags?'var(--warn)':'inherit')+'">0</b><span>'+T_.sumFlag+'</span></div>';
+  $$('#psum .mono').forEach(el=>countUp(el, parseFloat(el.dataset.to)));
+
+  const maxTrip = S.ntrips;
+  $('#buckets').innerHTML = bks.map(k=>{
+    const key = k==='BUY'?'buy':('t'+k[1]);
+    if(k!=='BUY' && parseInt(k[1],10)>maxTrip) return '';
+    const t=T_.trip[key];
+    const list=groups[k];
+    const inner = list.length
+      ? list.map(x=>{
+          const c = x.p.action==='BUY' ? (x.p.d.numbers.buyEff||0) : x.p.d.numbers.tc;
+          return '<div class="icard" data-id="'+x.it.id+'" data-act="'+k+'">'+
+            '<span class="grip" data-grip="1">⋮⋮</span>'+
+            '<div class="nm">'+L(x.it.zh)+'<small>'+T_.cat[x.it.cat]+' · '+x.it.vol+' m³ · '+x.it.wt+' kg</small></div>'+
+            '<span class="cost">'+HKD(c)+'</span>'+
+            (x.p.overridden?'<span class="ovr">'+T_.overridden+'</span>':'')+
+            '</div>';
+        }).join('')
+      : '';
+    return '<div class="bk'+(list.length?'':' empty')+'" data-bucket="'+k+'">'+
+      '<div class="bk-h"><div><div class="bn">'+t.zh+'</div><div class="bw">'+L(t.when)+'</div></div>'+
+      '<div class="cnt">'+list.length+'</div></div>'+
+      '<div class="bk-b">'+(list.length?inner:'<span>'+T_.emptyBk+'</span>')+'</div></div>';
+  }).join('');
+
+  const pending = S.unwanted.filter(u=>!S.decisions[u.id]).length;
+  $('#szSub').textContent = T_.szSub.replace('%n', pending);
+  $('#tdot').textContent = pending;
+  $('#tdot').style.display = pending? '' : 'none';
+  $('#planNote').textContent = T_.planNote;
+  $('#lPlanTrips').textContent = T_.planTrips;
+  $('#lSzList').textContent = T_.szList;
+  $('#btnGoRec').textContent = T_.goRec;
+
+  // 点击卡片 → 决策链
+  $$('#buckets .icard').forEach(el=>{
+    el.addEventListener('click', ()=>{ if(!el.dataset.dragged) openTrace(el.dataset.id); });
+  });
+}
+
+function countUp(el, to, dur){
+  dur = dur||620;
+  const from=0, t0=performance.now();
+  const fmt = v => to>999 || String(to).indexOf('HK')>=0 ? HKD(v) : Math.round(v);
+  const isHKD = el.textContent.indexOf('HK')>=0 || to>999;
+  function frame(t){
+    const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3);
+    el.textContent = isHKD ? HKD(from+(to-from)*e) : String(Math.round(from+(to-from)*e));
+    if(k<1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- 拖拽 ---------- */
+let drag=null;
+const fly=$('#fly');
+function startDrag(card, e, immediate){
+  const id=card.dataset.id, from=card.dataset.act;
+  const it=S.items.find(x=>x.id===id);
+  if(!it) return;
+  const r=card.getBoundingClientRect();
+  fly.innerHTML='<span class="grip" style="color:#c2ccd3">⋮⋮</span><span class="nm">'+L(it.zh)+'</span>';
+  fly.style.width=r.width+'px';
+  fly.classList.add('on');
+  moveFly(e.clientX, e.clientY);
+  card.classList.add('lift');
+  drag={card:card, id:id, from:from, it:it, x0:e.clientX, y0:e.clientY, active:true, hot:null};
+  document.body.style.userSelect='none';
+}
+function moveFly(x,y){ fly.style.left=(x-30)+'px'; fly.style.top=(y-24)+'px'; }
+function endDrag(e){
+  if(!drag) return;
+  const d=drag; drag=null;
+  fly.classList.remove('on');
+  d.card.classList.remove('lift');
+  document.body.style.userSelect='';
+  $$('.bk.hot').forEach(b=>b.classList.remove('hot'));
+  const el=document.elementFromPoint(e.clientX, e.clientY);
+  const bk=el && el.closest ? el.closest('[data-bucket]') : null;
+  if(!bk || bk.dataset.bucket===d.from){ renderPlan(); return; }
+  const to=bk.dataset.bucket;
+  const it=d.it;
+  // 不可替代物品没有重置价 —— 改为「当地购买」会得出无依据的经济结论，直接拒绝
+  if(to==='BUY' && it.repl==null){
+    renderPlan();
+    toast(LANG==='zh'
+      ? '「'+L(it.zh)+'」属不可替代物品，没有重置价可比较 —— 无法改为在香港购买。'
+      : '“'+L(it.zh)+'” is irreplaceable with no replacement price to compare — cannot switch to “buy in HK”.');
+    return;
+  }
+  const before=costOf(it,d.from), after=costOf(it,to);
+  const delta=after-before;
+  const sys=decideMove(it).action;
+  if(to===sys){ delete it.override; toast(T_.tReset); }
+  else { it.override=to; }
+  renderPlan(); renderItems();
+  const dtxt = Math.abs(delta)<1 ? T_.tSame : (delta>0? T_.tCost.replace('%v',HKD(delta)) : T_.tSave.replace('%v',HKD(-delta)));
+  toast(T_.tMove.replace('%n', L(it.zh)).replace('%a', T_.act[to]).replace('%d', dtxt));
+  if(navigator.vibrate) try{navigator.vibrate(18)}catch(err){}
+}
+document.addEventListener('pointerdown', e=>{
+  const grip=e.target.closest('.grip');
+  const card=e.target.closest('.icard');
+  if(!card || !$('#p-plan').classList.contains('on')) return;
+  if(grip && $('#fly')){ startDrag(card,e,true); e.preventDefault(); return; }
+  if(card){ drag={card:card, x0:e.clientX, y0:e.clientY, timer:setTimeout(()=>{ if(drag&&drag.pending){ drag.pending=false; startDrag(drag.card,{clientX:drag.x0,clientY:drag.y0},false); } },280), pending:true, active:false}; }
+});
+document.addEventListener('pointermove', e=>{
+  if(!drag) return;
+  if(drag.pending){
+    if(Math.abs(e.clientX-drag.x0)>8 || Math.abs(e.clientY-drag.y0)>8){ clearTimeout(drag.timer); drag=null; }
+    return;
+  }
+  if(!drag.active) return;
+  e.preventDefault();
+  moveFly(e.clientX,e.clientY);
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const bk=el&&el.closest?el.closest('[data-bucket]'):null;
+  $$('.bk.hot').forEach(b=>b.classList.remove('hot'));
+  if(bk && bk.dataset.bucket!==drag.from) bk.classList.add('hot');
+},{passive:false});
+document.addEventListener('pointerup', e=>{
+  if(!drag) return;
+  if(drag.pending){ clearTimeout(drag.timer); drag.card.dataset.dragged=''; setTimeout(()=>{delete drag.card.dataset.dragged;},60); drag=null; return; }
+  if(drag.active) endDrag(e);
+});
+document.addEventListener('pointercancel', ()=>{ if(drag&&drag.active){ fly.classList.remove('on'); drag.card.classList.remove('lift'); $$('.bk.hot').forEach(b=>b.classList.remove('hot')); drag=null; document.body.style.userSelect=''; } });
+
+/* ---------- decision trace sheet ---------- */
+function srcLinks(keys){
+  if(!keys||!keys.length) return '';
+  return '<div style="margin-top:14px"><div class="sec-t" style="margin:0 0 2px">'+T_.srcT+'</div>'+
+    keys.map(k=>{ const s=SRC[k]; if(!s) return '';
+      return '<a class="src" href="'+s.url+'" target="_blank" rel="noopener">'+L(s.zh)+'<br><span>'+T_.lastV+' '+s.v+' · '+s.url.replace(/^https?:\/\//,'')+'</span></a>';
+    }).join('')+'</div>';
+}
+function openTrace(id){
+  const it=S.items.find(x=>x.id===id);
+  if(!it) return;
+  const p=planOf(it), d=p.d;
+  let h='<div class="card tight" style="margin-bottom:12px"><div class="between">'+
+    '<div><div style="font-size:16px;font-weight:800">'+L(it.zh)+'</div>'+
+    '<div class="muted">'+T_.cat[it.cat]+' · '+T_.cond[it.cond]+' · '+T_.act[p.action]+'</div></div>'+
+    '<span class="pill '+(d.conf==='low'?'r':d.conf==='medium'?'w':'g')+'">'+T_.conf[d.conf]+'</span></div></div>';
+  h+='<div class="sec-t" style="margin-top:0">'+T_.traceT+'</div><div class="tr">';
+  d.trace.forEach(t=>{
+    h+='<div class="ti'+(t.bad?' bad':t.hl?' hl':'')+'">'+
+      '<div class="tl">'+L(t.label)+'</div>'+
+      '<div class="tv'+(t.bad?' bad':t.hl?' warn':'')+'">'+L(t.v)+'</div>'+
+      (t.d||[]).filter(x=>L(x)).map(x=>'<div class="td">'+L(x)+'</div>').join('')+
+      (t.calc?'<div class="tc">'+esc(t.calc)+'</div>':'')+
+      '</div>';
+  });
+  h+='</div>';
+  h+=srcLinks((d.flags&&d.flags.length?d.flags:[]).concat(['emsd']).filter((v,i,a)=>a.indexOf(v)===i));
+  openSheet(T_.traceT, h);
+}
+
+/* ---------- items page ---------- */
+let aiState=-1;
+function renderAIBox(){
+  const b=$('#aibox');
+  if(aiState<0){
+    b.innerHTML='<h4>'+T_.aiTitle+'</h4><div class="am">'+T_.aiSub+'</div><button class="btn" id="aiBtn">📷 '+T_.aiBtn+'</button>';
+    $('#aiBtn').onclick=()=>{ aiState=0; S.aiUsed=true; renderAIBox(); };
+    return;
+  }
+  const m=AI_MOCK[aiState];
+  b.innerHTML='<h4>'+T_.aiRes.replace('%g', L(m.guess)).replace('%c', Math.round(m.conf*100))+'</h4>'+
+    '<div class="am">'+(m.wrong?'⚠️ '+T_.aiWrong:'✅ '+T_.aiOk)+'</div>'+
+    '<button class="btn" id="aiNext">'+(m.wrong?'✏️ '+T_.aiWrong:'✅ '+T_.aiOk)+'</button>';
+  $('#aiNext').onclick=()=>{
+    if(m.wrong && m.patch){
+      const it=S.items.find(x=>x.id===m.patch.id);
+      if(it){ Object.assign(it,{zh:it.zh, vol:m.patch.vol, wt:m.patch.wt, cat:m.patch.cat, urgency:m.patch.urgency, repl:m.patch.repl}); it.aiFixed=true; }
+      toast(T_.aiFix.replace('%t', L(m.patch.name)));
+      aiState=-1; renderAIBox(); renderItems(); renderPlan();
+      return;
+    }
+    toast(T_.aiOk); aiState=-1; renderAIBox();
+  };
+}
+function renderItems(){
+  renderAIBox();
+  const bks=['T1','T2','T3','BUY'];
+  $('#filters').innerHTML='<div class="fchip'+(planFilter==='all'?' on':'')+'" data-f="all">'+T_.fAll+' '+S.items.length+'</div>'+
+    bks.map(k=>{
+      const n=S.items.filter(i=>planOf(i).action===k).length;
+      return '<div class="fchip'+(planFilter===k?' on':'')+'" data-f="'+k+'">'+T_.act[k]+' '+n+'</div>';
+    }).join('');
+  $$('#filters .fchip').forEach(el=>el.addEventListener('click',()=>{ planFilter=el.dataset.f; renderItems(); }));
+  const list=S.items.filter(i=>planFilter==='all'||planOf(i).action===planFilter);
+  $('#ilist').innerHTML = list.map((it,idx)=>{
+    const p=planOf(it);
+    return '<div class="irow" data-id="'+it.id+'" style="animation-delay:'+(idx*22)+'ms">'+
+      '<div class="av">'+(it.ico||'📦')+'</div>'+
+      '<div class="tt"><b>'+L(it.zh)+'</b>'+
+      '<span>'+T_.cat[it.cat]+' · '+T_.cond[it.cond]+' · '+it.vol+'m³ · '+it.wt+'kg</span></div>'+
+      '<span class="pill '+(p.action==='BUY'?'b':p.action==='T1'?'':'line')+'">'+T_.act[p.action]+'</span>'+
+      '<span class="ar">›</span></div>';
+  }).join('') + '<button class="btn ghost sm" id="addItem">'+T_.addItem+'</button>';
+  $$('#ilist .irow').forEach(el=>el.addEventListener('click',()=>openEdit(el.dataset.id)));
+  const ab=$('#addItem'); if(ab) ab.onclick=()=>{
+    const id='new'+Date.now();
+    S.items.push({id:id, zh:LANG==='zh'?'新物品':'New item', en:'New item', cat:'furniture', vol:.2, wt:10, urgency:'medium', repl:800, cond:'good', ico:'📦'});
+    openEdit(id); renderItems(); renderPlan();
+  };
+}
+function openEdit(id){
+  const it=S.items.find(x=>x.id===id);
+  if(!it) return;
+  const p=planOf(it);
+  const h=
+    '<div class="card tight" style="margin-bottom:14px"><div class="between">'+
+      '<div><div style="font-size:15.5px;font-weight:800">'+L(it.zh)+'</div>'+
+      '<div class="muted">'+T_.act[p.action]+' · '+(p.overridden?T_.overridden:T_.conf[p.d.conf])+'</div></div>'+
+      '<span class="pill '+(p.d.conf==='low'?'r':p.d.conf==='medium'?'w':'g')+'">'+T_.conf[p.d.conf]+'</span></div></div>'+
+    '<div class="fld"><label>'+(LANG==='zh'?'名称':'Name')+'</label><input id="eName" value="'+esc(L(it.zh))+'"></div>'+
+    '<div class="f2"><div class="fld"><label>'+(LANG==='zh'?'类别':'Category')+'</label><select id="eCat">'+
+      Object.keys(T.cat).map(c=>'<option value="'+c+'"'+(it.cat===c?' selected':'')+'>'+T_.cat[c]+'</option>').join('')+'</select></div>'+
+    '<div class="fld"><label>'+(LANG==='zh'?'成色':'Condition')+'</label><select id="eCond">'+
+      Object.keys(T.cond).map(c=>'<option value="'+c+'"'+(it.cond===c?' selected':'')+'>'+T_.cond[c]+'</option>').join('')+'</select></div></div>'+
+    '<div class="f2"><div class="fld"><label>'+(LANG==='zh'?'体积 m³':'Volume m³')+'</label><input id="eVol" type="number" step="0.01" value="'+it.vol+'"></div>'+
+    '<div class="fld"><label>'+(LANG==='zh'?'重量 kg':'Weight kg')+'</label><input id="eWt" type="number" step="0.5" value="'+it.wt+'"></div></div>'+
+    '<div class="f2"><div class="fld"><label>'+(LANG==='zh'?'急迫性':'Urgency')+'</label><select id="eUrg">'+
+      Object.keys(T.urg).map(c=>'<option value="'+c+'"'+(it.urgency===c?' selected':'')+'>'+T_.urg[c]+'</option>').join('')+'</select></div>'+
+    '<div class="fld"><label>'+(LANG==='zh'?'香港重置价':'HK replacement')+'</label><input id="eRepl" type="number" value="'+(it.repl==null?'':it.repl)+'"></div></div>'+
+    '<div class="sw"><div class="sl"><b>'+(LANG==='zh'?'是电器':'Is an appliance')+'</b><span>'+(LANG==='zh'?'触发电压/插头合规检查':'Triggers voltage/plug checks')+'</span></div>'+
+      '<div class="tg'+(it.appliance?' on':'')+'" id="eApp"><i></i></div></div>'+
+    '<div class="sw" id="ePlugWrap" style="display:'+(it.appliance?'':'none')+'"><div class="sl"><b>'+(LANG==='zh'?'插头符合香港规格':'Plug compliant in HK')+'</b><span>'+(LANG==='zh'?'英标 / 220V 50Hz':'UK plug / 220V 50Hz')+'</span></div>'+
+      '<div class="tg'+(it.plugOk?' on':'')+'" id="ePlug"><i></i></div></div>'+
+    '<div class="spacer"></div>'+
+    '<button class="btn" id="eSave">'+(LANG==='zh'?'保存并重算':'Save & recompute')+'</button>'+
+    '<div class="spacer"></div>'+
+    '<button class="btn ghost" id="eTrace">'+(LANG==='zh'?'查看决策链':'View decision trace')+'</button>'+
+    '<div class="spacer"></div>'+
+    '<button class="btn ghost" id="eDel" style="color:var(--bad)">'+T_.del+'</button>';
+  openSheet(T_.edit, h);
+
+  const bind=(sel,key,cast)=>{
+    const el=$(sel); if(!el) return;
+    el.addEventListener('input',()=>{ it[key]=cast?cast(el.value):el.value; });
+    el.addEventListener('change',()=>{ it[key]=cast?cast(el.value):el.value; });
+  };
+  bind('#eName','zh'); bind('#eCat','cat'); bind('#eCond','cond');
+  bind('#eVol','vol',parseFloat); bind('#eWt','wt',parseFloat);
+  bind('#eUrg','urgency'); bind('#eRepl','repl',v=>v===''?null:parseFloat(v));
+  $('#eApp').onclick=function(){ this.classList.toggle('on'); it.appliance=this.classList.contains('on'); if(it.appliance&&it.volt===undefined){it.volt='220V';it.plug='国标三脚';} $('#ePlugWrap').style.display=it.appliance?'':'none'; };
+  $('#ePlug').onclick=function(){ this.classList.toggle('on'); it.plugOk=this.classList.contains('on'); };
+  $('#eSave').onclick=()=>{ closeSheet(); renderItems(); renderPlan(); toast(LANG==='zh'?'已保存，计划已重算':'Saved; plan recomputed'); };
+  $('#eTrace').onclick=()=>openTrace(id);
+  $('#eDel').onclick=()=>{ S.items=S.items.filter(x=>x.id!==id); closeSheet(); renderItems(); renderPlan(); };
+}
+
+/* ---------- recover page: swipe deck ---------- */
+function recQueue(){ return S.unwanted.filter(u=>!S.decisions[u.id]); }
+function renderRecover(){
+  $('#lRecLeg').textContent=T_.recLeg;
+  $('#rleg').innerHTML = Object.keys(T.ben).map(k=>
+    '<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line)">'+
+    '<span class="pill '+(k==='cash'?'g':k==='subsidy'?'w':k==='free'?'b':k==='fee'?'r':'line')+'">'+T_.ben[k]+'</span>'+
+    '<span class="muted" style="flex:1">'+T_.benNote[k]+'</span></div>').join('').replace('<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-top:1px solid var(--line)">','<div style="display:flex;gap:9px;align-items:flex-start;padding:7px 0">');
+
+  const q=recQueue(), total=S.unwanted.length, done=total-q.length;
+  $('#rpg').style.width = (done/total*100)+'%';
+  $('#rtx').textContent = Math.min(done+1,total)+' / '+total;
+
+  const deck=$('#deck');
+  if(!q.length){
+    deck.innerHTML='<div class="card" style="height:100%;display:flex;align-items:center;justify-content:center"><div class="donebox">'+
+      '<div class="dk">✅</div><h3>'+T_.rDone+'</h3><p>'+T_.rDoneS.replace('%n',total).replace('%v',HKDN(sumDecisions()))+'</p>'+
+      '<div class="spacer"></div><button class="btn ghost sm" id="ragain">'+T_.rAgain+'</button></div></div>';
+    const ra=$('#ragain'); if(ra) ra.onclick=()=>{ S.decisions={}; renderRecover(); renderPlan(); };
+    renderDecidedList();
+    return;
+  }
+  deck.innerHTML = q.slice(0,3).map((it,i)=>recCard(it,i)).reverse().join('');
+  bindRec(q[0]);
+  renderDecidedList();
+}
+function sumDecisions(){
+  return S.unwanted.reduce((a,u)=>{
+    const d=S.decisions[u.id]; if(!d) return a;
+    const o=buildOffers(u).offers.find(x=>x.id===d);
+    return a + (o?o.net:0);
+  },0);
+}
+function curOffer(it){
+  const {offers,best}=buildOffers(it);
+  const viable=offers.filter(o=>o.feas!=='no');
+  if(!viable.length) return {o:offers[0], i:0, n:1};
+  let i=S.recIdx[it.id]||0;
+  // 默认停在推荐渠道
+  if(S.recIdx[it.id]===undefined){
+    const bi=viable.findIndex(o=>o.best);
+    i = bi>=0?bi:0;
+    S.recIdx[it.id]=i;
+  }
+  i=Math.max(0,Math.min(i,viable.length-1));
+  return {o:viable[i], i:i, n:viable.length, viable:viable};
+}
+function recCard(it, rank){
+  const c=curOffer(it), o=c.o;
+  const cls = rank===0?'top':rank===1?'b1':'b2';
+  const netCls = o.net>0?'pos':o.net<0?'neg':'zero';
+  const brk=[];
+  if(o.v.value) brk.push([LANG==='zh'?'回收价值':'Recovery value', '+'+HKD(o.v.value)]);
+  if(o.v.subsidy) brk.push([LANG==='zh'?'购买补贴':'Purchase subsidy', '+'+HKD(o.v.subsidy)]);
+  if(o.v.transport) brk.push([LANG==='zh'?'运输费':'Transport', '−'+HKD(o.v.transport)]);
+  if(o.v.handling) brk.push([LANG==='zh'?'处理费':'Handling', '−'+HKD(o.v.handling)]);
+  if(o.v.disposal) brk.push([LANG==='zh'?'处置费':'Disposal', '−'+HKD(o.v.disposal)]);
+  if(!brk.length) brk.push([LANG==='zh'?'无金钱往来':'No money changes hands', '0']);
+  return '<div class="rc '+cls+'" data-id="'+it.id+'">'+
+    '<div class="rh"><div class="rav">'+(it.ico||'📦')+'</div><div style="flex:1">'+
+      '<b>'+L(it.zh)+'</b>'+
+      '<div class="cond"><span class="pill line">'+T_.cond[it.cond]+'</span> <span class="pill line">'+T_.cat[it.cat]+'</span>'+
+      (it.appliance?' <span class="pill '+(it.regulated?'r':'w')+'">'+(it.regulated?(LANG==='zh'?'受管制':'Regulated'):(LANG==='zh'?'电器':'Appliance'))+'</span>':'')+'</div>'+
+    '</div></div>'+
+    '<div class="net"><div class="lb">'+T_.rNet+'</div><div class="vv '+netCls+'">'+HKDN(o.net)+'</div>'+
+      '<div style="margin-top:5px"><span class="pill '+(o.ben==='cash'?'g':o.ben==='subsidy'?'w':o.ben==='free'?'b':o.ben==='fee'?'r':'line')+'">'+T_.ben[o.ben]+'</span></div></div>'+
+    '<div class="ch"><div class="cn">'+L(o.name)+' <span style="font-weight:600;font-size:11px;color:#3a5b58">('+(c.i+1)+'/'+c.n+')</span></div>'+
+      '<div class="cd">'+L(o.note)+'</div></div>'+
+    '<div class="brk">'+brk.map(b=>'<div class="l"><span>'+b[0]+'</span><b>'+b[1]+'</b></div>').join('')+
+      '<div class="l tot"><span>'+T_.rNet+'</span><b>'+HKDN(o.net)+'</b></div></div>'+
+    (rank===0?('<div class="swh"><i>←</i> '+T_.rSwipe+' <i>→</i></div>'):'')+
+    '</div>';
+}
+function bindRec(top){
+  const card=$('#deck .rc.top'); if(!card) return;
+  card.querySelectorAll('[data-act]').forEach(b=>{
+    b.addEventListener('click', ev=>{ ev.stopPropagation(); b.dataset.act==='accept'?acceptTop():skipTop(); });
+  });
+  // 点卡片 → 全部渠道
+  card.addEventListener('click', ()=>{ if(Math.abs(card._dx||0)<6) openOffers(top.id); });
+  // 滑动切换渠道
+  let sx=0, sy=0, moving=false;
+  card.addEventListener('pointerdown', e=>{
+    if(e.target.closest('[data-act]')) return;
+    sx=e.clientX; sy=e.clientY; moving=true; card._dx=0;
+    card.style.transition='none'; card.setPointerCapture(e.pointerId);
+  });
+  card.addEventListener('pointermove', e=>{
+    if(!moving) return;
+    const dx=e.clientX-sx;
+    if(Math.abs(e.clientY-sy)>Math.abs(dx)&&Math.abs(e.clientY-sy)>24){ moving=false; card.style.transition=''; card.style.transform=''; return; }
+    card._dx=dx;
+    card.style.transform='translateX('+(dx*.55)+'px) rotate('+(dx*.022)+'deg)';
+  });
+  card.addEventListener('pointerup', e=>{
+    if(!moving) return; moving=false;
+    card.style.transition='';
+    const dx=e.clientX-sx; card.style.transform='';
+    if(Math.abs(dx)<64) return;
+    const it=S.unwanted.find(x=>x.id===top.id);
+    const c=curOffer(it), n=c.n;
+    let i=c.i + (dx<0?1:-1);
+    i=(i+n)%n;
+    S.recIdx[it.id]=i;
+    const nc=curOffer(it);
+    card.style.transition='none';
+    card.style.transform='translateX('+(dx<0?-40:40)+'px)';
+    card.style.opacity='0';
+    setTimeout(()=>{
+      card.outerHTML=recCard(it,0);
+      const ncard=$('#deck .rc.top');
+      if(ncard){ ncard.style.transform='translateX('+(dx<0?40:-40)+'px)'; ncard.style.opacity='0'; requestAnimationFrame(()=>{ ncard.style.transition=''; ncard.style.transform=''; ncard.style.opacity=''; }); }
+      bindRec(S.unwanted.find(x=>x.id===top.id));
+      if(navigator.vibrate) try{navigator.vibrate(10)}catch(err){}
+    },120);
+  });
+}
+function acceptTop(){
+  const q=recQueue(); if(!q.length) return;
+  const it=q[0], o=curOffer(it).o;
+  const card=$('#deck .rc.top');
+  if(card){ card.style.transition='transform .3s cubic-bezier(.3,.7,.4,1),opacity .3s'; card.style.transform='translateX(460px) rotate(16deg)'; card.style.opacity='0'; }
+  S.decisions[it.id]=o.id;
+  toast(T_.tAccept.replace('%i',L(it.zh)).replace('%o',L(o.name)));
+  if(navigator.vibrate) try{navigator.vibrate([10,30,14])}catch(e){}
+  setTimeout(()=>{ renderRecover(); renderPlan(); },240);
+}
+function skipTop(){
+  const q=recQueue(); if(!q.length) return;
+  const card=$('#deck .rc.top');
+  if(card){ card.style.transition='transform .28s,opacity .28s'; card.style.transform='translateY(-40px) scale(.9)'; card.style.opacity='0'; }
+  const it=q[0];
+  S.decisions[it.id]='__later__';
+  setTimeout(()=>{ renderRecover(); renderPlan(); },220);
+}
+function openOffers(id){
+  const it=S.unwanted.find(x=>x.id===id); if(!it) return;
+  const {offers}=buildOffers(it);
+  let h='<div class="card tight" style="margin-bottom:12px"><div style="font-size:16px;font-weight:800">'+L(it.zh)+'</div>'+
+    '<div class="muted">'+T_.cond[it.cond]+' · '+T_.cat[it.cat]+' · '+it.vol+'m³ · '+it.wt+'kg</div></div>';
+  h+='<div class="sec-t" style="margin-top:0">'+T_.offersT+'</div>';
+  offers.slice().sort((a,b)=>(b.net-a.net)).forEach(o=>{
+    const nc=o.net>0?'pos':o.net<0?'neg':'zero';
+    const bd=[];
+    if(o.v.value) bd.push((LANG==='zh'?'回收价 ':'value ')+'<em>+'+HKD(o.v.value)+'</em>');
+    if(o.v.subsidy) bd.push((LANG==='zh'?'补贴 ':'subsidy ')+'<em>+'+HKD(o.v.subsidy)+'</em>');
+    if(o.v.transport) bd.push((LANG==='zh'?'运输 ':'transport ')+'<em>−'+HKD(o.v.transport)+'</em>');
+    if(o.v.disposal) bd.push((LANG==='zh'?'处置 ':'disposal ')+'<em>−'+HKD(o.v.disposal)+'</em>');
+    if(!bd.length) bd.push('<em>'+HKD(0)+'</em>');
+    h+='<div class="of '+(o.best?'best':o.feas==='no'?'no':'')+'">'+
+      '<div class="oh"><div><div class="on">'+L(o.name)+'</div>'+
+      '<div class="sd">'+(o.side==='sz'?(LANG==='zh'?'深圳渠道':'Shenzhen'):(LANG==='zh'?'香港渠道':'Hong Kong'))+
+      ' · '+T_.feas[o.feas]+(o.locked?' · '+(LANG==='zh'?'未勾选购新 · 不参与排序':'locked out until you plan a purchase'):'')+'</div></div>'+
+      '<div class="nv '+nc+'">'+HKDN(o.net)+'</div></div>'+
+      '<div><span class="pill '+(o.ben==='cash'?'g':o.ben==='subsidy'?'w':o.ben==='free'?'b':o.ben==='fee'?'r':'line')+'">'+T_.ben[o.ben]+'</span></div>'+
+      '<div class="bd">'+bd.join('')+'</div>'+
+      '<div class="nt">'+L(o.note)+'</div>'+
+      '<div class="nt" style="color:var(--warn);font-weight:600">⚠ '+T_.confirmL+'</div>'+
+      (o.src||[]).map(k=>{const s=SRC[k]; if(!s) return '';
+        return '<a class="src" href="'+s.url+'" target="_blank" rel="noopener">'+L(s.zh)+'<br><span>'+T_.lastV+' '+s.v+'</span></a>';}).join('')+
+      '</div>';
+  });
+  h+='<div class="note" style="margin-top:12px">'+(LANG==='zh'
+    ?'净结果 = 回收价值 + 适用补贴 − 运输费 − 处理费 − 处置费。「购买补贴」是买新品时的折扣，不是回收款 —— 勾选「计划在深圳购买新家电」后它才参与排序。'
+    :'Net = recovery value + applicable subsidy − transport − handling − disposal. A “purchase subsidy” is a discount on a new purchase, not a recycling payment; it only enters the ranking once you say you plan to buy.')+'</div>';
+  openSheet(T_.offersT, h);
+}
+function renderDecidedList(){
+  const el=$('#szcard').nextElementSibling;
+  const done=S.unwanted.filter(u=>S.decisions[u.id]);
+  let box=$('#decidedBox');
+  if(box) box.remove();
+  if(!done.length) return;
+  const div=document.createElement('div');
+  div.className='card'; div.id='decidedBox';
+  div.innerHTML='<div style="font-size:14px;font-weight:800;margin-bottom:8px">'+(LANG==='zh'?'已决定的处置方式':'Decided routes')+'</div>'+
+    done.map(u=>{
+      const o=buildOffers(u).offers.find(x=>x.id===S.decisions[u.id]);
+      const nm=o?L(o.name):(LANG==='zh'?'稍后决定':'Decide later');
+      const nt=o?HKDN(o.net):'—';
+      return '<div class="between" style="padding:6px 0;border-top:1px solid var(--line)">'+
+        '<div style="min-width:0"><div style="font-size:13px;font-weight:700">'+L(u.zh)+'</div>'+
+        '<div class="muted">'+nm+'</div></div>'+
+        '<span class="mono" style="font-weight:800;font-size:13px">'+nt+'</span></div>';
+    }).join('');
+  const deck=$('#deck'); deck.parentNode.insertBefore(div, deck.nextSibling);
+}
+
+/* ---------- more page ---------- */
+function renderMore(){
+  const e=ESTATES[S.estate];
+  $('#lDest').textContent=T_.mFac;
+  $('#mfac').innerHTML=
+    '<div class="between" style="margin-bottom:8px"><div><div style="font-size:15.5px;font-weight:800">'+e.zh+'</div>'+
+    '<div class="muted">'+e.en+'</div></div><span class="pill b">'+S.movein+'</span></div>'+
+    '<div class="muted" style="margin-bottom:10px;line-height:1.55">'+L(e.note)+'</div>'+
+    Object.keys(e.f).map(k=>{
+      const f=e.f[k], col = f.st==='op'?'#1f8a4c':f.st==='pl'?'#c2740a':'#c2342c';
+      return '<div class="fac"><span class="fn">'+T_.fac[k]+'</span>'+
+        '<span class="fb"><i style="width:'+Math.round(f.avail*100)+'%;background:'+col+'"></i></span>'+
+        '<span class="pill '+(f.st==='op'?'g':f.st==='pl'?'w':'r')+'" style="flex:0 0 auto">'+T_.st[f.st]+'</span>'+
+        '<span class="muted" style="flex:0 0 auto;min-width:64px;text-align:right">'+L(f.eta)+'</span></div>';
+    }).join('')+
+    '<div class="note b" style="margin-top:10px;margin-bottom:0">'+(LANG==='zh'
+      ?'可获得性为依政府文件设定的估计值，不是实测；「计划中」的设施绝不按已运营呈现。'
+      :'Availability figures are estimates derived from government documents, not on-site surveys. Planned facilities are never presented as operating.')+'</div>';
+
+  $('#lPref').textContent=T_.mPref;
+  $('#mpref').innerHTML=
+    '<div class="card"><div class="sw"><div class="sl"><b>'+T_.lang+'</b><span>'+T_.langS+'</span></div>'+
+      '<div class="tg'+(LANG==='en'?' on':'')+'" id="tgLang"><i></i></div></div>'+
+    '<div class="sw"><div class="sl"><b>'+T_.assist+'</b><span>'+T_.assistS+'</span></div>'+
+      '<div class="tg'+(S.assist?' on':'')+'" id="tgAssist"><i></i></div></div>'+
+    '<div class="sw" style="margin-bottom:0"><div class="sl"><b>'+T_.buyNew+'</b><span>'+T_.buyNewS+'</span></div>'+
+      '<div class="tg'+(S.buyNew?' on':'')+'" id="tgBuy"><i></i></div></div></div>';
+  $('#tgLang').onclick=function(){ LANG = LANG==='zh'?'en':'zh'; this.classList.toggle('on'); $('#btnLang').textContent=LANG==='zh'?'中':'A'; renderAll(); };
+  $('#tgAssist').onclick=function(){ S.assist=!S.assist; this.classList.toggle('on'); document.body.classList.toggle('assist',S.assist); };
+  $('#tgBuy').onclick=function(){ S.buyNew=!S.buyNew; this.classList.toggle('on'); renderRecover(); };
+
+  $('#lBound').textContent=T_.mBound;
+  $('#mbound').innerHTML='<div class="note r" style="margin-bottom:0">'+T_.boundTxt+'</div>';
+  $('#lSrc').textContent=T_.mSrc;
+  $('#msrc').innerHTML=Object.keys(SRC).map(k=>{const s=SRC[k];
+    return '<a class="src" href="'+s.url+'" target="_blank" rel="noopener">'+L(s.zh)+'<br><span>'+T_.lastV+' '+s.v+' · '+s.url.replace(/^https?:\/\//,'')+'</span></a>';
+  }).join('');
+  $('#btnPrint').textContent=T_.print;
+  $('#btnReOb').textContent=T_.reOb;
+}
+
+/* ---------- tabs ---------- */
+function switchTab(t){
+  S.tab=t;
+  $$('.tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===t));
+  $$('.page').forEach(p=>p.classList.toggle('on', p.id==='p-'+t));
+  renderHeader();
+  if(t==='plan') renderPlan();
+  if(t==='items') renderItems();
+  if(t==='rec') renderRecover();
+  if(t==='more') renderMore();
+  $('#main').scrollTop=0;
+}
+$$('.tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+$('#btnMore').addEventListener('click',()=>switchTab('more'));
+$('#btnGoRec').addEventListener('click',()=>switchTab('rec'));
+
+/* ---------- language ---------- */
+$('#btnLang').addEventListener('click',()=>{ LANG=LANG==='zh'?'en':'zh'; $('#btnLang').textContent=LANG==='zh'?'中':'A'; renderAll(); });
+
+function applyStatic(){
+  $$('.tab').forEach(b=>{ const s=b.querySelector('.tl'); if(s) s.textContent=T_.tab[b.dataset.tab]; });
+  $('#szcard') && ($('#lSzList').textContent=T_.szList);
+}
+function renderAll(){
+  applyStatic(); renderHeader(); renderPlan(); renderItems(); renderRecover(); renderMore();
+}
+
+/* ---------- print ---------- */
+$('#btnPrint').addEventListener('click',()=>{
+  const e=ESTATES[S.estate];
+  let h='<h1>'+(LANG==='zh'?'LoopMove 分阶段搬迁计划':'LoopMove phased move plan')+'</h1>'+
+    '<div class="pmeta">'+e.zh+' / '+e.en+' · '+(LANG==='zh'?'入住':'move-in')+' '+S.movein+' · '+
+    (LANG==='zh'?'分':'')+S.ntrips+(LANG==='zh'?'趟':' trips')+' · '+(LANG==='zh'?'生成于':'generated')+' '+new Date().toISOString().slice(0,10)+'</div>';
+  ['T1','T2','T3','BUY'].forEach(k=>{
+    if(k!=='BUY' && parseInt(k[1],10)>S.ntrips) return;
+    const list=S.items.filter(i=>planOf(i).action===k);
+    if(!list.length) return;
+    h+='<h2>'+T_.trip[k==='BUY'?'buy':'t'+k[1]].zh+' — '+list.length+' '+(LANG==='zh'?'件':'items')+'</h2><table><tr><th>'+(LANG==='zh'?'物品':'Item')+'</th><th>'+(LANG==='zh'?'类别':'Category')+'</th><th>'+(LANG==='zh'?'体积':'Vol')+'</th><th>'+(LANG==='zh'?'重量':'Wt')+'</th><th>'+(LANG==='zh'?'成本':'Cost')+'</th></tr>'+
+      list.map(i=>'<tr><td>'+L(i.zh)+'</td><td>'+T_.cat[i.cat]+'</td><td>'+i.vol+' m³</td><td>'+i.wt+' kg</td><td>'+HKD(costOf(i,k))+'</td></tr>').join('')+'</table>';
+  });
+  const done=S.unwanted.filter(u=>S.decisions[u.id]);
+  if(done.length){
+    h+='<h2>'+(LANG==='zh'?'深圳侧待办':'Shenzhen action list')+'</h2><table><tr><th>'+(LANG==='zh'?'物品':'Item')+'</th><th>'+(LANG==='zh'?'渠道':'Channel')+'</th><th>'+(LANG==='zh'?'净结果':'Net')+'</th></tr>'+
+      done.map(u=>{const o=buildOffers(u).offers.find(x=>x.id===S.decisions[u.id]);
+        return '<tr><td>'+L(u.zh)+'</td><td>'+(o?L(o.name):'—')+'</td><td>'+(o?HKDN(o.net):'—')+'</td></tr>';}).join('')+'</table>';
+  }
+  h+='<div class="pmeta" style="margin-top:5mm">'+T_.boundTxt+'</div>';
+  $('#printarea').innerHTML=h;
+  window.print();
+});
+
+/* ---------- clock ---------- */
+(function tick(){
+  const d=new Date();
+  $('#clock').textContent = d.getHours()+':'+String(d.getMinutes()).padStart(2,'0');
+  setTimeout(tick,20000);
+})();
+
+/* ---------- boot ---------- */
+$('#main').addEventListener('scroll',()=>{
+  $('#hd').classList.toggle('stuck', $('#main').scrollTop>4);
+});
+obRender();
+</script>
+</body>
+</html>
