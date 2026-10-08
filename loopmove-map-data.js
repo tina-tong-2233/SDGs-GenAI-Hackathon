@@ -1,20 +1,24 @@
-/* Moving service points are fictional. Facilities are sourced planning records; schematic groups are not coordinates. */
+/* Verified external service links and sourced facility records. Facility groups are schematic, not coordinates. */
 (function (root, factory) {
   const api = factory();
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.LoopMoveMapData = api;
 })(typeof window !== 'undefined' ? window : null, function () {
   'use strict';
-  const categories = {all: '全部地点', recycle: '回收', donate: '捐赠', pickup: '集运', movein: '入住'};
-  const bounds = {west: 113.94, east: 114.20, south: 22.43, north: 22.59};
-  const places = [
-    {id:'sz-recycle', name:'南山回收点 · 示例', area:'深圳 · 南山', category:'recycle', lat:22.55, lng:113.972, accepts:'小家电、电子设备', note:'出发前整理不用的电器。实际接收品类、费用和预约方式需另行核实。'},
-    {id:'sz-donate', name:'福田捐赠点 · 示例', area:'深圳 · 福田', category:'donate', lat:22.558, lng:114.043, accepts:'洁净衣物、书籍', note:'先确认物品状况，再向真实机构核实是否接收。'},
-    {id:'sz-pickup', name:'深圳集运点 · 示例', area:'深圳 · 罗湖', category:'pickup', lat:22.565, lng:114.128, accepts:'已装箱的搬家物品', note:'用于演示出发前的物品交接。跨境运输要求需向实际承运方确认。'},
-    {id:'hk-recycle', name:'元朗回收点 · 示例', area:'香港 · 元朗', category:'recycle', lat:22.455, lng:114.03, accepts:'纸箱、包装材料', note:'搬入后分类整理包装。此处没有真实营业时间或回收承诺。'},
-    {id:'hk-donate', name:'上水捐赠点 · 示例', area:'香港 · 上水', category:'donate', lat:22.499, lng:114.117, accepts:'可再使用的家居小物', note:'用于体验附近地点筛选；请勿按此示意位置前往。'},
-    {id:'hk-movein', name:'粉岭入住点 · 示例', area:'香港 · 粉岭', category:'movein', lat:22.484, lng:114.166, accepts:'搬入目的地', note:'用于演示选择搬入地点，不对应具体住宅或收货地址。'}
-  ];
+  const serviceCategories = {all:'全部服务', recycle:'回收处理', donate:'物资捐赠', resale:'二手转卖', moving:'搬运服务'};
+  const services = [
+    {id:'sz-bulky',name:'深圳大件垃圾处理指引',provider:'深圳市政府',area:'深圳',category:'recycle',icon:'box',kind:'官方指引',description:'家具准备丢弃前，先了解定点投放与预约清运的处理方式。',note:'政策说明页；具体收运安排请向所在小区物业或辖区确认。',action:'查看处理指引',url:'https://www.sz.gov.cn/zfgb/zcjd/content/post_4981833.html'},
+    {id:'hk-green',name:'绿在区区',provider:'香港环境保护署',area:'香港',category:'recycle',icon:'recycle',kind:'回收网点',description:'查找社区回收设施，把纸箱、包装和可回收物送到合适的地方。',note:'接收品类及开放安排以各回收设施公告为准。',action:'查找回收设施',url:'https://www.wastereduction.gov.hk/zh-cn/waste-reduction-programme/green-at-community'},
+    {id:'hk-alba',name:'欧绿保电器回收',provider:'ALBA IWS',area:'香港',category:'recycle',icon:'appliance',kind:'预约入口',description:'查看废旧电器回收说明，前往机构网站了解上门回收安排。',note:'请先核对适用电器、搬运条件和预约要求。',action:'查看电器回收',url:'https://weee.com.hk/hk/recycling/'},
+    {id:'hk-salvation',name:'救世军物资捐赠',provider:'救世军循环再用计划',area:'香港',category:'donate',icon:'heart',kind:'捐赠站查询',description:'让仍可使用的物品继续被需要，按地区查找物资捐赠站。',note:'捐赠前向机构确认接收品类与物品状况要求。',action:'查找捐赠站',url:'https://recycling.salvationarmy.org.hk/collection_points'},
+    {id:'hk-carousell',name:'Carousell 家具与家居',provider:'Carousell 旋转拍卖',area:'香港',category:'resale',icon:'tag',kind:'二手平台',description:'浏览家具与家居分类，为闲置物品寻找下一位使用者。',note:'刊登、议价和交接在平台进行；成交价格由买卖双方确认。',action:'打开二手平台',url:'https://www.carousell.com.hk/categories/furniture-home-living-13/'},
+    {id:'hk-lalamove',name:'Lalamove 定价帮搬',provider:'Lalamove 香港',area:'香港本地',category:'moving',icon:'truck',kind:'搬运服务',description:'查看香港本地送货及附加搬运服务，按物品和楼宇情况了解费用。',note:'本入口为香港本地服务，不代表提供深圳至香港跨境搬家。',action:'了解搬运服务',url:'https://www.lalamove.com/zh-hk/help-move'}
+  ].map(service => ({...service,checkedAt:'2026-10-08'}));
+  function filterServices(query='',category='all') {
+    const term = String(query).trim().toLocaleLowerCase();
+    return services.filter(s => (category === 'all' || s.category === category) &&
+      [s.name,s.provider,s.area,s.description].join(' ').toLocaleLowerCase().includes(term));
+  }
   const facilityCategories = {all:'全部配套', transport:'交通', education:'教育', medical:'医疗', shopping:'商业', leisure:'休闲'};
   const districts = {all:'全部片区', ktn:'古洞北', fln:'粉岭北 / 上水', st:'新田 / 牛潭尾', hsk:'洪水桥 / 厦村'};
   const statuses = {existing:'现有', building:'建设中', planned:'规划中'};
@@ -46,14 +50,5 @@
       (district === 'all' || p.district === district) && (view !== 'current' || p.status === 'existing') &&
       [p.name,p.area,p.note].join(' ').toLocaleLowerCase().includes(term));
   }
-  function filterPlaces(query = '', category = 'all') {
-    const term = String(query).trim().toLocaleLowerCase();
-    return places.filter(p => (category === 'all' || p.category === category) &&
-      [p.name, p.area, p.accepts].join(' ').toLocaleLowerCase().includes(term));
-  }
-  function project(lat, lng) {
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < bounds.south || lat > bounds.north || lng < bounds.west || lng > bounds.east) return null;
-    return {x: (lng - bounds.west) / (bounds.east - bounds.west) * 100, y: (bounds.north - lat) / (bounds.north - bounds.south) * 100};
-  }
-  return {categories, places, filterPlaces, project, facilityCategories, districts, statuses, sources, facilities, filterFacilities};
+  return {serviceCategories, services, filterServices, facilityCategories, districts, statuses, sources, facilities, filterFacilities};
 });
