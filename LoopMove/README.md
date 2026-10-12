@@ -8,7 +8,7 @@
 
 现在从 `index.html` 开始：选择入住片区与月份 → 了解北都配套 → 核对示例房间 → 决定物品去向 → 生成搬家行动计划。支持返回修改、刷新恢复、待办勾选、下载计划及打印。
 
-默认使用“小林从深圳搬到古洞北”的示例故事，现场演示约 3–5 分钟。详细点击顺序及讲解见 [用户旅程演示稿](docs/JOURNEY_GUIDE.md)。独立扫描与配套页面继续保留。
+默认使用“小林从深圳搬到古洞北”的示例故事，现场演示约 3–5 分钟。详细点击顺序及讲解见 [用户旅程演示稿](docs/guide/JOURNEY_GUIDE.md)。独立扫描与配套页面继续保留。
 
 ## 用户旅程视觉风格
 
@@ -49,7 +49,7 @@ bash scripts/start.sh
 7. 勾选确认，生成行动计划。展示首批、后续及出发前处理清单，勾选待办并下载计划。
 8. 点击一张服务卡片，展示从计划到外部服务网站的衔接。需要重跑时选择 **“重新开始”**。
 
-完整演示约 3–5 分钟；逐步讲解稿见 [用户旅程指南](docs/JOURNEY_GUIDE.md)。
+完整演示约 3–5 分钟；逐步讲解稿见 [用户旅程指南](docs/guide/JOURNEY_GUIDE.md)。
 
 ### 计划计算规则
 
@@ -62,23 +62,22 @@ bash scripts/start.sh
 
 ## 在线访问：GitHub Pages
 
-项目无需构建，可通过 GitHub Pages 发布静态页面。仓库中没有填写真实线上地址；发布后请将下面的占位地址替换为实际链接。
+Demo 通过 GitHub Pages 发布，地址：
 
-```text
-https://<GitHub用户名>.github.io/<仓库名>/
-```
+**https://tina-tong-2233.github.io/SDGs-GenAI-Hackathon/**
 
-发布步骤：
+- 根路径默认打开 `index.html` 完整旅程。
+- 独立扫描页：`https://tina-tong-2233.github.io/SDGs-GenAI-Hackathon/features/scan/index.html`
+- 北都配套与服务页：`https://tina-tong-2233.github.io/SDGs-GenAI-Hackathon/features/explore/index.html`
 
-1. 将项目文件推送到 GitHub 仓库，保留图片目录及相对路径。
-2. 打开仓库 **Settings → Pages**。
-3. 在 **Build and deployment** 中选择 **Deploy from a branch**。
-4. 选择包含项目文件的分支（通常为 `main`），目录选择 **/(root)**，保存。
-5. 等待部署完成，从 Pages 显示的站点地址访问完整旅程（`index.html`）。
+首次开启只需一次（若尚未开启）：
 
-仓库根路径默认打开 `index.html` 的完整旅程；`features/scan/index.html` 为独立扫描页。`archive/mobile.html` 和 `archive/desktop.html` 为早期版本。
+1. 打开仓库 **Settings → Pages**。
+2. 在 **Build and deployment → Source** 选择 **Deploy from a branch**。
+3. Branch 选择 `main`，目录选择 **/(root)**，保存。
+4. 等待部署完成，访问上面的地址；之后每次推送到 `main` 都会自动更新站点。
 
-GitHub 仓库页面用于阅读源码；点击仓库里的 HTML 文件不会运行项目。GitHub Pages 提供静态网站托管，不能运行本项目未来的 AI 后端。发布选项以 [GitHub Pages 官方文档](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site) 为准。
+仓库根目录已包含 `.nojekyll`，让 Pages 按原样提供静态文件，不改动 HTML、CSS、JS 与图片。GitHub 仓库页面用于阅读源码，点击仓库里的 HTML 文件不会运行项目；GitHub Pages 只能托管静态页面，不能运行本项目未来的 AI 后端（实时识别需另配 HTTPS 后端，见 [WorkBuddy 接入计划](docs/development/WORKBUDDY_INTEGRATION_PLAN.md)）。发布选项以 [GitHub Pages 官方文档](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site) 为准。
 
 ## 独立扫描体验
 
@@ -107,7 +106,9 @@ GitHub 仓库页面用于阅读源码；点击仓库里的 HTML 文件不会运�
 ```text
 LoopMove/
 ├── index.html                       # 完整用户旅程入口
-├── README.md                        # 使用说明与模块索引
+├── README.md                        # 使用说明与文档索引
+├── .nojekyll                        # 让 GitHub Pages 按原样提供静态文件
+├── .gitignore                       # 忽略 macOS 与构建产物
 ├── features/
 │   ├── journey/                     # 用户旅程
 │   │   ├── journey.js               # 五步界面、导航、保存与导出
@@ -127,17 +128,23 @@ LoopMove/
 │   ├── room-photos/                 # 五张扫描示例原图
 │   └── prompts/                     # 插画提示词
 ├── docs/
-│   ├── JOURNEY_GUIDE.md             # 用户旅程讲解与操作顺序
-│   ├── DEVELOPMENT.md               # 开发规则
-│   ├── MAP_PLAN.md                  # 配套资料与地图计划
-│   ├── WORKBUDDY_INTEGRATION_PLAN.md # 实时 AI 接入计划
-│   └── references/                  # 项目证据包与修改清单
+│   ├── README.md                    # 文档分类索引
+│   ├── guide/
+│   │   └── JOURNEY_GUIDE.md         # 用户旅程演示讲解与操作顺序
+│   ├── development/
+│   │   ├── DEVELOPMENT.md           # 开发守则
+│   │   ├── MAP_PLAN.md              # 配套资料与地图计划
+│   │   └── WORKBUDDY_INTEGRATION_PLAN.md  # 实时 AI 接入计划
+│   └── references/                  # 项目证据包与修改清单（归档）
 ├── scripts/start.sh                 # 启动本地服务
 ├── tests/journey.test.cjs            # 旅程规则与扫描回归测试
-└── archive/                         # 保留的早期版本
+└── archive/                         # 归档：早期版本
+    ├── README.md                    # 归档说明
     ├── mobile.html
     └── desktop.html
 ```
+
+各文档按用途分类，见 [文档索引](docs/README.md)。
 
 ### 功能入口
 
@@ -191,7 +198,7 @@ LoopMove/
 
 ## WorkBuddy AI 接入路线
 
-详细任务、接口约定和验收标准见 [接入计划](docs/WORKBUDDY_INTEGRATION_PLAN.md)。实施顺序：
+详细任务、接口约定和验收标准见 [接入计划](docs/development/WORKBUDDY_INTEGRATION_PLAN.md)。实施顺序：
 
 1. 确认 WorkBuddy 授权和图片输入能力，跑通一张照片的真实识别。
 2. 建立后端上传、授权、任务执行和结果校验服务。
@@ -221,7 +228,7 @@ node --check features/journey/journey.js
 node --check features/journey/journey-logic.js
 ```
 
-当前 12 项测试已通过，覆盖尺寸校验、物品去向、搬运体积、固定物品、建议保护、刷新恢复及扫描回归。真实浏览器视觉检查尚未执行。开发约束见 [DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+当前 12 项测试已通过，覆盖尺寸校验、物品去向、搬运体积、固定物品、建议保护、刷新恢复及扫描回归。真实浏览器视觉检查尚未执行。开发约束见 [DEVELOPMENT.md](docs/development/DEVELOPMENT.md)。
 
 ## 常见问题
 
@@ -242,4 +249,4 @@ node --check features/journey/journey-logic.js
 
 “搬家服务”提供六张可直接跳转的卡片：深圳大件垃圾处理指引、绿在区区、欧绿保电器回收、救世军捐赠站、Carousell 二手家具和 Lalamove 香港本地搬运。支持服务分类与关键词筛选，点击整张卡片在新标签页打开对应网站。此视图不再使用示例地点、地图或定位。北都配套示意图及配套保存保留，支持手机布局和深浅色模式。
 
-Google Maps 仅列为后续目标，本轮没有接入 SDK 或 API。文件分工、接入条件和验收步骤见 [Map 计划](docs/MAP_PLAN.md)。
+Google Maps 仅列为后续目标，本轮没有接入 SDK 或 API。文件分工、接入条件和验收步骤见 [Map 计划](docs/development/MAP_PLAN.md)。

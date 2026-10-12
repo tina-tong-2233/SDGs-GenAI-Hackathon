@@ -1,0 +1,6 @@
+# macOS
+.DS_Store
+
+# Node.js（开发检查）
+node_modules/
+*.log
